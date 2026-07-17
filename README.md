@@ -132,6 +132,22 @@ uv run ruff check src tests
 uv run mypy
 ```
 
+## Architecture
+
+If you want to work on this, here's how the parts fit together. The earlier "How it works" section is the short version; this is the longer one.
+
+There are two processes, and they don't share memory. The first is the MCP server, a normal Python package under `src/ableton_ai`. The second is the remote script under `remote_script`, which runs inside Ableton's own embedded Python interpreter. They talk to each other over a TCP socket on `localhost:9877`, passing JSON back and forth. That socket is the whole interface between them.
+
+The MCP server is the side your AI client talks to. `server.py` builds a [FastMCP](https://modelcontextprotocol.io) server and registers every tool. The tools live in `src/ableton_ai/tools`, split by what they touch: `tracks`, `clips`, `notes`, `devices`, `browser`, `automation`, `arrangement`, `session`, and a few musical helpers. Each tool is a small function decorated with `@tool`, which registers it and wraps it in uniform error handling, so a tool body is usually two lines: send a command, format the result. None of the tools hold state. They all go through one shared `AbletonConnection` in `connection.py`, which owns the socket and serializes every exchange behind a lock, because the socket handles one command at a time.
+
+The remote script is the side that can actually touch Live. Ableton's Control Surface system is the only supported way to run code inside Live and reach its API, and it only runs Python, which is why this half is Python no matter what. When Live loads the script, it opens the socket and waits. A command comes in as JSON, the script looks it up, runs it against Live's API, and sends the result back.
+
+The one subtlety worth knowing is threading. The socket runs on a background thread, but Live's API can only be touched safely from Live's main thread. So any command that changes something (creating a track, setting a parameter, writing notes) is put on a queue and run on the main thread, while read-only commands can answer straight from the socket thread. This isn't decoration. A state change made from the wrong thread crashes Live outright, which is a mistake this codebase has made and fixed.
+
+A single request, end to end: you ask for a track, the assistant calls the `create_midi_track` tool, the server sends `{"type": "create_midi_track", ...}` over the socket, the remote script queues it onto Live's main thread, Live makes the track, the result travels back through the socket to the tool, and the tool returns a sentence the assistant reads. You see the track appear in Ableton as it happens.
+
+The last piece is `rest_api`, an optional HTTP server that exposes the same commands to clients that don't speak MCP, like a local Ollama model. It's not needed for the Claude workflow and you can ignore it unless you want it.
+
 ## Credits
 
 Built on the original AbletonMCP by [Siddharth Ahuja](https://github.com/ahujasid) and later work by [Jason Poindexter](https://github.com/jpoindexter), with thanks to [calclavia](https://github.com/calclavia) and [Ronbalt](https://github.com/Ronbalt).
