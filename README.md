@@ -1,44 +1,34 @@
-# AbletonMCP
+# Let AI control Ableton
 
-Control Ableton Live from an AI assistant (Claude Code, Claude Desktop, Cursor, or any MCP client).
+This lets Claude drive Ableton Live directly. It can create tracks, load instruments and effects from your browser, turn any knob on any device, write MIDI clips with per note probability, draw automation curves, and mix. Around 130 commands covering most of the Live Object Model.
 
-This is a fork. See [Credits](#credits) at the bottom for the full lineage. It adds per note probability and access to rack internals, and fixes a bug that crashed Live.
+You talk, it builds. You listen and tell it what's wrong.
 
-## What it can do
+Here's what that looks like in practice: you ask for an ambient patch, and Claude creates a MIDI track, drops Drift on it, sets a slow attack and a long release, adds an Auto Filter with an unsynced LFO on the cutoff, writes a chord at a 7 bar loop length so it drifts against your other clips, and fires it. That takes it about twenty seconds. Then you listen and say the bass is too quiet, and it fixes that too.
 
-Create tracks, load instruments and effects from Live's browser, set any device parameter, write MIDI clips with per note probability, draw clip automation, control the mixer, and drive transport. Roughly 130 commands, covering most of the Live Object Model.
+Let me walk you through it.
 
-## What it cannot do
+## What it can't do
 
-Worth reading before you start, because none of these are bugs and no amount of prompting gets around them.
+I'm putting this near the top because these aren't bugs, and no amount of clever prompting gets around them. Better to know now than to spend an hour confused.
 
-**Anything that is a dropdown is unreachable.** Live does not expose routing choices as automatable parameters, so the API cannot touch them. In practice:
+Anything that's a dropdown is unreachable. Live doesn't expose routing choices as automatable parameters, so the API can't touch them. That means the Map button on the Max for Live LFO, the Audio From selector on a Compressor's sidechain, and the source and destination selectors in Drift's modulation matrix. You set those by hand, once, and Claude owns every other knob on the device from then on. Knobs are scriptable, dropdowns are yours.
 
-* The Max for Live LFO's **Map** button. Map it once by hand, after which the assistant owns every other knob on it (Rate, Depth, Jitter, Smooth).
-* A Compressor's sidechain **Audio From** source. Everything else on the device is settable.
-* Drift's **modulation matrix** source and destination selectors. The amounts are settable, the routing is not.
+There's no command for a new Live set either. That's File, New Live Set, same as always.
 
-Rule of thumb: knobs are scriptable, dropdowns are yours.
+The big one: Claude can't hear anything. It can set a filter to 0.37 and verify the value took, but it has no idea what came out of your speakers. It's a very fast pair of hands with no ears. Every judgement about whether something actually sounds good has to come from you. In my experience that's fine, and often better than it sounds, because the tedious part of music production isn't taste. It's typing 200 automation breakpoints.
 
-**There is no "new set" command.** Use File, New Live Set yourself.
+## Installing
 
-**The assistant cannot hear anything.** It can set a filter to 0.37 and verify the value took, but it has no idea what came out of your speakers. Treat it as a very fast pair of hands rather than a collaborator with taste. Every judgement about how something sounds has to be yours.
+You'll need Ableton Live 11 or newer (12 is better, and note probability needs 11 as a minimum), Python 3.10 or newer, and [uv](https://docs.astral.sh/uv/).
 
-## Requirements
-
-* Ableton Live 11 or newer (Live 12 recommended; note probability requires Live 11+)
-* Python 3.10 or newer
-* [uv](https://docs.astral.sh/uv/)
-
-## Installation
-
-### 1. Install uv
+First, install uv if you don't have it:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Clone and install
+Then clone this repo and install the dependencies:
 
 ```bash
 git clone https://github.com/freekmurze/ableton-mcp.git
@@ -46,42 +36,47 @@ cd ableton-mcp
 uv sync
 ```
 
-> **Do not run `uvx ableton-mcp`.** That pulls a different package that happens to
-> share the name on PyPI, not this fork. Install from your clone, as above.
+Don't run `uvx ableton-mcp`. There's a different package with the same name on PyPI, and you'll silently install the wrong thing. Install from your clone.
 
-### 3. Install the Remote Script into Live
-
-**macOS**
+Next, copy the remote script into Live's user library. On macOS:
 
 ```bash
 mkdir -p ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonMCP
 cp AbletonMCP_Remote_Script/__init__.py ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonMCP/
 ```
 
-**Windows**
+On Windows:
 
 ```powershell
 mkdir "$env:USERPROFILE\Documents\Ableton\User Library\Remote Scripts\AbletonMCP"
 copy AbletonMCP_Remote_Script\__init__.py "$env:USERPROFILE\Documents\Ableton\User Library\Remote Scripts\AbletonMCP\"
 ```
 
-### 4. Enable it in Live
+Now open Live, go to Settings, then Link, Tempo & MIDI. Under Control Surface, pick AbletonMCP. Leave Input and Output on None. Live's status bar should flash `AbletonMCP: Listening for commands on port 9877`. If it doesn't, the script didn't load, so check the path above and restart Live.
 
-Open **Settings**, then **Link, Tempo & MIDI**. Under **Control Surface**, choose **AbletonMCP**. Leave Input and Output set to None.
+## Connecting Claude Code
 
-Live's status bar should flash `AbletonMCP: Listening for commands on port 9877`. If it does not, the script did not load. Recheck step 3 and restart Live.
-
-### 5. Connect your MCP client
-
-**Claude Code**
+One command:
 
 ```bash
 claude mcp add ableton -s user -- uv run --directory /absolute/path/to/ableton-mcp ableton-mcp
 ```
 
-**Claude Desktop or Cursor**
+Use the real absolute path to your clone. Then restart Claude Code, because it reads its MCP config at startup and a server added mid session won't show up until you do.
 
-Add this to `claude_desktop_config.json`:
+Check it worked:
+
+```bash
+claude mcp get ableton
+```
+
+You want to see `Status: ✔ Connected`.
+
+## Connecting Claude Desktop
+
+Open your config file. On macOS that's `~/Library/Application Support/Claude/claude_desktop_config.json`, and on Windows it's `%APPDATA%\Claude\claude_desktop_config.json`.
+
+Add this:
 
 ```json
 {
@@ -94,69 +89,87 @@ Add this to `claude_desktop_config.json`:
 }
 ```
 
-Restart your MCP client afterwards. Clients read their config at startup, so a server added mid session will not appear until you restart.
+Restart Claude Desktop. You should see a tools icon appear in the chat box.
 
-### 6. Check it works
+## Your first prompt
 
-Open a **throwaway** Live set and ask your assistant to create a MIDI track and load an instrument. If a track appears, you are connected.
+Open a throwaway Live set, not something you care about. Then paste this in:
 
-## Editing the Remote Script
+```text
+You're driving my Ableton Live set through the AbletonMCP tools.
 
-Live loads remote scripts at startup and caches the compiled bytecode. After editing `__init__.py`:
+Before you build anything, read the current state with get_session_info and
+get_track_info so you know what's already there.
 
-1. Save your Live set.
-2. Copy the file into the user library again.
-3. Restart Live. Toggling the Control Surface off and on is unreliable, because Python caches the imported module.
+Some things to keep in mind:
 
-If you add a command, register it in **three** places or it will silently fail with "Unknown command":
+You can't hear anything you make. So don't tell me something sounds good.
+Build it, verify the parameters actually took by reading them back, and let
+me judge the sound.
 
-1. The `elif command_type in [...]` whitelist, if it modifies state.
-2. A dispatch branch.
-3. The handler method itself.
+Read a device's parameters with get_device_parameters before setting them.
+Don't guess at parameter names or ranges. Every device is different, and the
+value_string field tells you what Live actually prints on the knob.
 
-State modifying commands **must** run on Live's main thread, and that whitelist is what routes them there. A mutating command that skips it runs on the socket thread and **crashes Live**. That is precisely the bug fixed in this fork, so it is not hypothetical.
+Anything that's a dropdown in Live's UI can't be set through the API. That
+includes the Max for Live LFO's Map button, a Compressor's sidechain source,
+and Drift's mod matrix routing. If a plan needs one of those, tell me and
+I'll click it.
 
-## Safety
+Now: create a MIDI track, load Drift on it, and make an ambient pad with a
+slow attack and a long release. Add an Auto Filter after it with a slow
+unsynced LFO on the cutoff. Write a chord as a 7 bar loop and fire it.
+```
 
-The remote script opens an unauthenticated TCP socket on `localhost:9877`. It is not reachable from the network, but any process running as your user can drive Ableton through it.
+That last paragraph is the actual request. Everything above it is context worth keeping around, so I'd suggest putting it in a `CLAUDE.md` in your project, or better, use the skill below.
 
-More practically: an assistant with 130 commands can wreck a project quickly, and it cannot hear what it is doing. Work on copies, save often, and remember that Cmd+Z covers most API operations.
+## The skill
 
-## What this fork changes
+There's a skill in `skills/ableton` in this repo. It's a set of instructions that teaches Claude how to use these tools well: which parameter names each command actually wants, how to verify changes really landed, how to reach inside drum racks, and how to build generative patches with coprime loop lengths and note probability.
 
-**New**
+It exists because I made every one of those mistakes myself and got tired of explaining them again in each new session.
 
-* `add_notes_with_probability`. Per note probability and velocity deviation, via Live 11+'s `MidiNoteSpecification`. The rest of the codebase uses the legacy `clip.set_notes()` 5 tuple API, which has no probability field at all.
-* `set_chain_device_parameter` and `get_chain_device_parameters`. Reach devices nested inside racks, for example one drum pad's synth. Previously a rack exposed only its own (often unassigned) macros, leaving its contents unreachable.
-* `set_song_scale` and `get_song_scale_names`. `get_song_scale` existed with no setter, so the global scale was readable but unchangeable.
+Install it by copying it into your skills folder:
 
-**Fixed**
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/ableton ~/.claude/skills/
+```
 
-* **`load_browser_item_to_return` crashed Live.** It called `browser.load_item()` from the socket thread rather than the main thread, because it was missing from the main thread whitelist. Mutating Live off the main thread is a guaranteed crash. Now marshalled correctly.
-* **Clip automation targeted the wrong device.** `set_clip_automation`, `get_clip_automation`, and `clear_clip_automation` matched a parameter by name across every device on a track and took the first hit. Names are shared constantly (Frequency exists on Auto Filter, Erosion, Reverb, and Grain Delay), so this silently automated whichever device happened to come first. They now accept `device_index`, and an ambiguous name raises rather than guessing.
-* **`get_clip_automation` returned no curve.** It reported only `has_automation: true`, which made automation impossible to verify. It now samples the envelope with `value_at_time()` and returns the real shape.
-* **`transpose_notes` destroyed probability.** It round tripped through `clip.set_notes()`, silently dropping every note's probability. It now uses the extended note API and preserves it.
-* **Mixer commands failed silently.** `set_track_pan`, `set_track_volume`, and `set_send_level` defaulted a missing argument and reported success, so a wrong argument name would centre your pans or zero your sends while claiming it worked. They now raise.
-* **`_clear_clip_automation` was defined twice.** Python kept the second, leaving the first as dead code. Removed.
+Restart Claude Code. Then type `/ableton` or just ask for something musical, and it'll pick the skill up on its own.
 
-**Improved**
+For Claude Desktop, skills live in your project or in the Capabilities settings, depending on your setup. Copying the folder to `~/.claude/skills` covers Claude Code.
 
-* Device parameters now include `value_string`, the text Live prints on the knob ("Off", "1/16", "440 Hz"). Without it a caller sees a bare float and cannot tell what `Transpose Mode = 0.0` actually means.
-* `get_scale_notes` defaults to the song's real scale instead of always assuming C major.
+## A warning worth reading
 
-## Credits
+The remote script opens an unauthenticated TCP socket on `localhost:9877`. It isn't reachable from the network, but any process running as your user can drive Ableton through it.
 
-**This is a fork.** It exists because of other people's work, and the interesting parts of the architecture are theirs.
+The more realistic risk is Claude itself. It has 130 commands that change your project, and it can't hear what it's doing. It will occasionally clear an automation lane you cared about. Work on copies, save often, and lean on Cmd+Z, which covers most API operations.
 
-* **[Siddharth Ahuja](https://github.com/ahujasid)**, author of the original [ahujasid/ableton-mcp](https://github.com/ahujasid/ableton-mcp). The original concept, the socket based remote script, and the architecture everything here rests on.
-* **[Jason Poindexter](https://github.com/jpoindexter)**, author of [jpoindexter/ableton-mcp](https://github.com/jpoindexter/ableton-mcp), the direct parent of this fork. Expanded the command surface enormously, added the REST API and the Max for Live device, and built the main thread marshalling that makes state changes safe in the first place.
+## What's different here
 
-Thanks also to the upstream contributors whose commits are part of this history: [calclavia](https://github.com/calclavia) and [Ronbalt](https://github.com/Ronbalt).
+I added per note probability through `add_notes_with_probability`, because the rest of the codebase uses Live's legacy `clip.set_notes()` API, and that one has no probability field at all. Probability is most of what makes a generative patch worth listening to, so this mattered.
 
-This fork's contribution is narrow: note probability, rack internals, and a handful of bug fixes found by using the thing in anger. The foundation is not mine.
+I added `set_chain_device_parameter` and `get_chain_device_parameters` to reach devices nested inside racks. Before, a drum rack only handed you its own macros, which are usually unassigned, so a single drum pad's decay was untouchable.
 
-Not affiliated with or endorsed by Ableton.
+`set_song_scale` and `get_song_scale_names` are new too. There was a getter for the song scale but no setter, which is a strange place to stop.
 
-## Licence
+On the fixes: `load_browser_item_to_return` crashed Live outright. It called `browser.load_item()` from the socket thread instead of Live's main thread, and mutating Live off the main thread is a guaranteed crash. It took my Live down before I found it.
 
-MIT. See [LICENSE](LICENSE). The original copyright notice is retained, as MIT requires.
+Clip automation used to target the wrong device. It matched a parameter by name across every device on the track and took the first hit, and names are shared constantly. Frequency exists on Auto Filter, Erosion, Reverb and Grain Delay. So you'd automate whichever device happened to come first and never know. It now takes a `device_index`, and an ambiguous name raises instead of guessing.
+
+`get_clip_automation` never returned the curve, only `has_automation: true`, which made automation impossible to verify. It samples the envelope now and gives you the real shape.
+
+`transpose_notes` silently destroyed probability by round tripping through the legacy API. `set_track_pan`, `set_track_volume` and `set_send_level` failed silently when you passed the wrong argument name, defaulting to a value and reporting success, which is how I once ran a whole session with every reverb send sitting at zero while being told it worked. And `_clear_clip_automation` was defined twice, so the first copy was dead code.
+
+Device parameters now include `value_string`, the text Live prints on the knob. Without it you get a bare float and no idea what `Transpose Mode = 0.0` means.
+
+## In closing
+
+You can find the code [on GitHub](https://github.com/freekmurze/ableton-mcp). If something breaks, open an issue.
+
+This is a fork, and the foundation isn't mine. [Siddharth Ahuja](https://github.com/ahujasid) wrote the [original](https://github.com/ahujasid/ableton-mcp): the concept, the socket based remote script, and the architecture all of this rests on. [Jason Poindexter](https://github.com/jpoindexter) built the [parent fork](https://github.com/jpoindexter/ableton-mcp), expanded the command surface enormously, added the REST API and the Max for Live device, and wrote the main thread marshalling that makes state changes safe in the first place. Thanks also to [calclavia](https://github.com/calclavia) and [Ronbalt](https://github.com/Ronbalt), whose commits are part of this history.
+
+What I added is narrow: probability, rack internals, and a handful of bugs I found by using the thing in anger. Everything underneath is theirs.
+
+It's MIT licensed, and not affiliated with Ableton.
