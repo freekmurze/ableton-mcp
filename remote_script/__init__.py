@@ -5860,7 +5860,15 @@ class AbletonAI(ControlSurface):
                     browser_or_item.audio_effects,
                     browser_or_item.midi_effects
                 ]
-                
+
+                # VST/AU plug-ins, Max for Live, the user library and packs are
+                # also loadable. The old list stopped at the five built-in
+                # categories, which is why "the API can't load plug-ins" - it
+                # just never searched the plugins root.
+                for extra in ("plugins", "max_for_live", "user_library", "packs"):
+                    if hasattr(browser_or_item, extra):
+                        categories.append(getattr(browser_or_item, extra))
+
                 for category in categories:
                     item = self._find_browser_item_by_uri(category, uri, max_depth, current_depth + 1)
                     if item:
