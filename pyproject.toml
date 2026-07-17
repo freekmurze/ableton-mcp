@@ -93,7 +93,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["T20"]
+# Intra-package relative imports (from ._base import ...) are the normal idiom.
+"src/ableton_mcp/tools/*" = ["TID252"]
+# The REST test suite is inherited. It bootstraps the module under test via a
+# sys.path insert (PTH118/PTH120), names mocks in PascalCase (N806), and
+# compares against booleans explicitly (E712). Rewriting 366 working tests to
+# satisfy style is not worth it, so those rules are relaxed for tests only.
+"tests/**" = ["T20", "N806", "PTH118", "PTH120", "E712", "SIM117", "RET503"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["ableton_mcp"]
