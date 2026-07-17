@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 #: Every tool defined across the tool modules. If a module fails to import, the
 #: count drops and startup fails loudly rather than quietly serving a subset.
-EXPECTED_TOOL_COUNT = 133
+EXPECTED_TOOL_COUNT = 148
 
 
 def create_server() -> FastMCP:

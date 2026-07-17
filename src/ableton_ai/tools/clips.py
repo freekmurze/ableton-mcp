@@ -288,3 +288,134 @@ def stop_clip(track_index: int, clip_index: int) -> str:
     """
     connection().send_command("stop_clip", {"track_index": track_index, "clip_index": clip_index})
     return f"Stopped clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def set_clip_follow_action(
+    track_index: int,
+    clip_index: int,
+    action_a: str | None = None,
+    action_b: str | None = None,
+    chance: float | None = None,
+    time: float | None = None,
+) -> str:
+    """
+    Set a clip's follow action, so it advances to another clip on its own.
+
+    This is how you get generative arrangements that progress while each track
+    keeps looping independently.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - action_a, action_b: one of none, stop, again, previous, next, first, last,
+      any, other, jump. The clip picks between A and B by chance.
+    - chance: weighting between action_a and action_b (0.0 to 1.0)
+    - time: how long before the action fires, in bars
+    """
+    params: dict[str, object] = {"track_index": track_index, "clip_index": clip_index}
+    if action_a is not None:
+        params["action_a"] = action_a
+    if action_b is not None:
+        params["action_b"] = action_b
+    if chance is not None:
+        params["chance"] = chance
+    if time is not None:
+        params["time"] = time
+    connection().send_command("set_clip_follow_action", params)
+    return f"Set follow action on clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def quantize_clip(
+    track_index: int, clip_index: int, quantize_to: float = 0.25, amount: float = 1.0
+) -> str:
+    """
+    Quantize the notes in a clip to a grid.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - quantize_to: Grid in beats (0.25 = sixteenth note, 1.0 = quarter note)
+    - amount: How strongly to pull toward the grid (0.0 to 1.0)
+    """
+    connection().send_command(
+        "quantize_clip",
+        {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "quantize_to": quantize_to,
+            "amount": amount,
+        },
+    )
+    return f"Quantized clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def set_clip_fade_in(track_index: int, clip_index: int, start: float, end: float) -> str:
+    """
+    Set an audio clip's fade-in region, in beats.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - start: Fade-in start position in beats
+    - end: Fade-in end position in beats
+    """
+    connection().send_command(
+        "set_clip_fade_in",
+        {"track_index": track_index, "clip_index": clip_index, "start": start, "end": end},
+    )
+    return f"Set fade-in on clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def set_clip_fade_out(track_index: int, clip_index: int, start: float, end: float) -> str:
+    """
+    Set an audio clip's fade-out region, in beats.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - start: Fade-out start position in beats
+    - end: Fade-out end position in beats
+    """
+    connection().send_command(
+        "set_clip_fade_out",
+        {"track_index": track_index, "clip_index": clip_index, "start": start, "end": end},
+    )
+    return f"Set fade-out on clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def set_clip_start_marker(track_index: int, clip_index: int, position: float) -> str:
+    """
+    Set a clip's start marker, in beats.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - position: Start marker position in beats
+    """
+    connection().send_command(
+        "set_clip_start_marker",
+        {"track_index": track_index, "clip_index": clip_index, "position": position},
+    )
+    return f"Set start marker on clip at track {track_index}, slot {clip_index}"
+
+
+@tool
+def set_clip_end_marker(track_index: int, clip_index: int, position: float) -> str:
+    """
+    Set a clip's end marker, in beats.
+
+    Parameters:
+    - track_index: The index of the track
+    - clip_index: The index of the clip slot
+    - position: End marker position in beats
+    """
+    connection().send_command(
+        "set_clip_end_marker",
+        {"track_index": track_index, "clip_index": clip_index, "position": position},
+    )
+    return f"Set end marker on clip at track {track_index}, slot {clip_index}"

@@ -423,3 +423,29 @@ def set_song_scale(scale_name: str) -> str:
     if result.get("error"):
         return str(result["error"])
     return f"Song scale set to {result.get('scale_name')} (root {result.get('root_note')})"
+
+
+@tool
+def set_song_root_note(root_note: int) -> str:
+    """
+    Set the song's root note. Pair with set_song_scale to set the key.
+
+    Parameters:
+    - root_note: 0 to 11, where 0 is C, 1 is C#, ... 9 is A, 11 is B.
+    """
+    result = connection().send_command("set_song_root_note", {"root_note": root_note})
+    return f"Set song root note to {result.get('root_note', root_note)}"
+
+
+@tool
+def stop_all_clips() -> str:
+    """Stop every playing clip in the session."""
+    connection().send_command("stop_all_clips")
+    return "Stopped all clips"
+
+
+@tool
+def tap_tempo() -> str:
+    """Tap the tempo once (call repeatedly in time to set a tempo by feel)."""
+    result = connection().send_command("tap_tempo")
+    return f"Tapped tempo. Tempo is now {result.get('tempo')}"

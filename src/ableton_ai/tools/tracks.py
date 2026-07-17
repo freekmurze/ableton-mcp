@@ -475,3 +475,61 @@ def unfold_track(track_index: int) -> str:
     if "error" in result:
         return f"Error: {result.get('error')}"
     return f"Unfolded track {track_index}"
+
+
+@tool
+def create_return_track() -> str:
+    """Create a new return track (for shared send effects like reverb)."""
+    result = connection().send_command("create_return_track")
+    return f"Created return track. There are now {result.get('count')} return tracks."
+
+
+@tool
+def delete_return_track(index: int) -> str:
+    """
+    Delete a return track.
+
+    Parameters:
+    - index: The index of the return track to delete
+    """
+    connection().send_command("delete_return_track", {"index": index})
+    return f"Deleted return track {index}"
+
+
+@tool
+def ungroup_tracks(group_track_index: int) -> str:
+    """
+    Ungroup a group track, moving its children back out.
+
+    Parameters:
+    - group_track_index: The index of the group track to ungroup
+    """
+    connection().send_command("ungroup_tracks", {"group_track_index": group_track_index})
+    return f"Ungrouped track {group_track_index}"
+
+
+@tool
+def set_track_delay(track_index: int, delay_ms: float) -> str:
+    """
+    Set a track's delay compensation in milliseconds (nudges the track early or late).
+
+    Parameters:
+    - track_index: The index of the track
+    - delay_ms: Delay in milliseconds (can be negative to pull the track earlier)
+    """
+    connection().send_command("set_track_delay", {"track_index": track_index, "delay_ms": delay_ms})
+    return f"Set track {track_index} delay to {delay_ms}ms"
+
+
+@tool
+def unmute_all() -> str:
+    """Unmute every track."""
+    connection().send_command("unmute_all")
+    return "Unmuted all tracks"
+
+
+@tool
+def unsolo_all() -> str:
+    """Clear solo on every track."""
+    connection().send_command("unsolo_all")
+    return "Cleared solo on all tracks"
