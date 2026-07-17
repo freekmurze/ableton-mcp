@@ -1748,7 +1748,8 @@ class AbletonAI(ControlSurface):
         action_b = params.get("action_b", None)
         chance = params.get("chance", None)
         time = params.get("time", None)
-        result = self._set_clip_follow_action(track_index, clip_index, action_a, action_b, chance, time)
+        enabled = params.get("enabled", None)
+        result = self._set_clip_follow_action(track_index, clip_index, action_a, action_b, chance, time, enabled)
         return result
 
     def _wr_set_clip_gain(self, params):
@@ -6564,7 +6565,7 @@ class AbletonAI(ControlSurface):
             self.log_message("Error getting clip follow action: " + str(e))
             return {"error": str(e)}
 
-    def _set_clip_follow_action(self, track_index, clip_index, action_a=None, action_b=None, chance=None, time=None):
+    def _set_clip_follow_action(self, track_index, clip_index, action_a=None, action_b=None, chance=None, time=None, enabled=None):
         """Set the follow action settings of a clip"""
         try:
             tracks = list(self._song.tracks)
@@ -6593,8 +6594,20 @@ class AbletonAI(ControlSurface):
                 clip.follow_action_chance = chance
             if time is not None:
                 clip.follow_action_time = time
+            enabled_set = None
+            if enabled is not None:
+                # The follow-action on/off switch. Its property name has varied
+                # between Live versions, so try the known ones defensively.
+                for attr in ("follow_action_enabled", "launch_mode", "follow_action_active"):
+                    if hasattr(clip, attr) and attr == "follow_action_enabled":
+                        clip.follow_action_enabled = bool(enabled)
+                        enabled_set = attr
+                        break
+                if enabled_set is None:
+                    return {"error": "This Live version has no settable follow-action enable switch",
+                            "tried": ["follow_action_enabled"]}
 
-            return {"success": True}
+            return {"success": True, "enabled_via": enabled_set}
         except Exception as e:
             self.log_message("Error setting clip follow action: " + str(e))
             return {"error": str(e)}

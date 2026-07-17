@@ -298,6 +298,7 @@ def set_clip_follow_action(
     action_b: str | None = None,
     chance: float | None = None,
     time: float | None = None,
+    enabled: bool | None = None,
 ) -> str:
     """
     Set a clip's follow action, so it advances to another clip on its own.
@@ -312,6 +313,7 @@ def set_clip_follow_action(
       any, other, jump. The clip picks between A and B by chance.
     - chance: weighting between action_a and action_b (0.0 to 1.0)
     - time: how long before the action fires, in bars
+    - enabled: turn the clip's follow-action switch on or off
     """
     params: dict[str, object] = {"track_index": track_index, "clip_index": clip_index}
     if action_a is not None:
@@ -322,6 +324,8 @@ def set_clip_follow_action(
         params["chance"] = chance
     if time is not None:
         params["time"] = time
+    if enabled is not None:
+        params["enabled"] = enabled
     connection().send_command("set_clip_follow_action", params)
     return f"Set follow action on clip at track {track_index}, slot {clip_index}"
 
