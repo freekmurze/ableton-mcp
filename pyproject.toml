@@ -1,7 +1,7 @@
 [project]
-name = "ableton-mcp"
+name = "ableton-ai"
 version = "2.1.0"
-description = "Control Ableton Live from an AI assistant via MCP. Fork of jpoindexter/ableton-mcp (itself a fork of ahujasid/ableton-mcp), adding per-note probability, rack-internals access, and crash fixes."
+description = "Control Ableton Live from an AI assistant via MCP: tracks, devices, clips, automation, and generative MIDI with per-note probability."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -28,10 +28,11 @@ dependencies = ["mcp[cli]>=1.3.0"]
 
 [project.optional-dependencies]
 rest = ["fastapi>=0.100.0", "uvicorn>=0.22.0", "pydantic>=2.0.0", "requests>=2.28.0"]
-all = ["ableton-mcp[rest]"]
+all = ["ableton-ai[rest]"]
 
 [project.scripts]
-ableton-mcp = "ableton_mcp.server:main"
+ableton-ai = "ableton_mcp.server:main"
+install-remote-script = "ableton_mcp.install:main"
 
 [project.urls]
 Homepage = "https://github.com/freekmurze/ableton-mcp"
@@ -45,6 +46,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ableton_mcp"]
+
+# Bundle the remote script into the wheel so `install-remote-script` can copy it
+# into Ableton's user library at runtime. It lives at the repo root because it is
+# the canonical copy people also install by hand.
+[tool.hatch.build.targets.wheel.force-include]
+"AbletonMCP_Remote_Script/__init__.py" = "ableton_mcp/_remote_script/__init__.py"
 
 [dependency-groups]
 dev = [
@@ -95,6 +102,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Intra-package relative imports (from ._base import ...) are the normal idiom.
 "src/ableton_mcp/tools/*" = ["TID252"]
+# install.py is a CLI; printing to the user is the point.
+"src/ableton_mcp/install.py" = ["T20"]
 # The REST test suite is inherited. It bootstraps the module under test via a
 # sys.path insert (PTH118/PTH120), names mocks in PascalCase (N806), and
 # compares against booleans explicitly (E712). Rewriting 366 working tests to

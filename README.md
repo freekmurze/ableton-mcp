@@ -1,181 +1,141 @@
-# Let AI control Ableton
+# Ableton AI
 
-Say "build me a dark ambient patch with a slow filter sweep" and watch your Live set fill in. New MIDI track, Drift loaded, slow attack, long release, Auto Filter behind it with an unsynced LFO drifting across the cutoff, a chord written at a 7 bar loop so it never quite lines up with anything else. Fired and playing. That takes about twenty seconds.
+Control Ableton Live from an AI assistant like Claude. You describe what you want in plain language, and it builds it in your Live set: tracks, instruments, effects, MIDI clips, automation, and mixing. Around 130 commands covering most of the Live Object Model.
 
-Then you listen, say the bass is too quiet, and it fixes that too.
+You describe, it builds, you listen and judge. The assistant has no ears, so it handles the mechanical work while you keep the taste.
 
-That's the whole loop. You describe, it builds, you judge. Around 130 commands covering most of the Live Object Model: creating tracks, loading anything from your browser, turning any knob on any device, writing MIDI with per note probability, drawing automation, mixing, transport.
+## What you can do with it
 
-Where this gets genuinely interesting is the stuff you'd never do by hand because life is short. A twelve minute filter sweep with 200 breakpoints. Six parameters each on their own slow curve at different phase offsets. Clips at 3, 5, 7, 11, 13 and 17 bars, which are all coprime, so the full stack doesn't repeat for over a million bars. That's about 77 days of music that never plays the same way twice, and it took one sentence to ask for.
+Ask for a sound and get it built:
 
-Per note probability is the other one. Every note gets its own chance of firing, so the kick stays certain while the hats flicker and the melody thins out and fills back in. Generative patches that actually evolve rather than loop.
+```text
+Build a dark ambient pad on a new track. Slow attack, long release,
+a filter behind it with a slow LFO on the cutoff. Play a minor chord.
+```
 
-None of that is hard. It's just tedious, and tedium is exactly what a machine should be doing while you get on with deciding whether any of it sounds good.
+Ask for the tedious things you'd never do by hand:
 
-Let me walk you through it.
+```text
+Write six clips at 3, 5, 7, 11, 13 and 17 bar lengths. They're coprime,
+so the loop won't repeat for over a million bars.
+```
 
-## What it can't do
+```text
+Draw a twelve minute filter sweep with 200 automation points, then put
+per-note probability on the hats so they flicker instead of repeating.
+```
 
-I'm putting this near the top because these aren't bugs, and no amount of clever prompting gets around them. Better to know now than to spend an hour confused.
+Ask it to fix what you just heard:
 
-Anything that's a dropdown is unreachable. Live doesn't expose routing choices as automatable parameters, so the API can't touch them. That means the Map button on the Max for Live LFO, the Audio From selector on a Compressor's sidechain, and the source and destination selectors in Drift's modulation matrix. You set those by hand, once, and Claude owns every other knob on the device from then on. Knobs are scriptable, dropdowns are yours.
+```text
+The bass is too quiet and the reverb is too wet. Pull them back.
+```
 
-There's no command for a new Live set either. That's File, New Live Set, same as always.
+## How it works
 
-The big one: Claude can't hear anything. It can set a filter to 0.37 and verify the value took, but it has no idea what came out of your speakers. It's a very fast pair of hands with no ears. Every judgement about whether something actually sounds good has to come from you. In my experience that's fine, and often better than it sounds, because the tedious part of music production isn't taste. It's typing 200 automation breakpoints.
+The assistant talks to Ableton through the [Model Context Protocol](https://modelcontextprotocol.io) (MCP), an open standard for giving AI tools access to external systems. This project is an MCP server that exposes Ableton's Live Object Model as a set of tools the assistant can call.
 
-## Installing
+There are two pieces:
 
-You'll need Ableton Live 11 or newer (12 is better, and note probability needs 11 as a minimum), Python 3.10 or newer, and [uv](https://docs.astral.sh/uv/).
+The MCP server runs on your machine as its own process. Your AI client (Claude Code, Claude Desktop, Cursor) launches it and calls its tools.
 
-First, install uv if you don't have it:
+A remote script runs inside Ableton itself. Ableton's Control Surface system lets you run Python inside Live, and that script opens a local socket the MCP server talks to. This is the only supported way into Live's API, so it has to be Python and it has to be enabled in Ableton's settings.
+
+When you ask for something, the assistant calls a tool, the server sends a command over the socket, the remote script runs it against Live's API, and the result comes back. You see it happen in Ableton in real time.
+
+## Installation
+
+You need Ableton Live 11 or newer, and [uv](https://docs.astral.sh/uv/).
+
+First, install the remote script into Live. This is the part that runs inside Ableton:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+uvx --from ableton-ai install-remote-script
 ```
 
-Then clone this repo and install the dependencies:
+Then connect your AI client.
+
+For Claude Code:
 
 ```bash
-git clone https://github.com/freekmurze/ableton-mcp.git
-cd ableton-mcp
-uv sync
+claude mcp add ableton -s user -- uvx ableton-ai
 ```
 
-Don't run `uvx ableton-mcp`. There's a different package with the same name on PyPI, and you'll silently install the wrong thing. Install from your clone.
-
-Next, copy the remote script into Live's user library. On macOS:
-
-```bash
-mkdir -p ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonMCP
-cp AbletonMCP_Remote_Script/__init__.py ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonMCP/
-```
-
-On Windows:
-
-```powershell
-mkdir "$env:USERPROFILE\Documents\Ableton\User Library\Remote Scripts\AbletonMCP"
-copy AbletonMCP_Remote_Script\__init__.py "$env:USERPROFILE\Documents\Ableton\User Library\Remote Scripts\AbletonMCP\"
-```
-
-Now open Live, go to Settings, then Link, Tempo & MIDI. Under Control Surface, pick AbletonMCP. Leave Input and Output on None. Live's status bar should flash `AbletonMCP: Listening for commands on port 9877`. If it doesn't, the script didn't load, so check the path above and restart Live.
-
-## Connecting Claude Code
-
-One command:
-
-```bash
-claude mcp add ableton -s user -- uv run --directory /absolute/path/to/ableton-mcp ableton-mcp
-```
-
-Use the real absolute path to your clone. Then restart Claude Code, because it reads its MCP config at startup and a server added mid session won't show up until you do.
-
-Check it worked:
-
-```bash
-claude mcp get ableton
-```
-
-You want to see `Status: ✔ Connected`.
-
-## Connecting Claude Desktop
-
-Open your config file. On macOS that's `~/Library/Application Support/Claude/claude_desktop_config.json`, and on Windows it's `%APPDATA%\Claude\claude_desktop_config.json`.
-
-Add this:
+For Claude Desktop, add this to `claude_desktop_config.json` (find it under Settings, Developer, Edit Config):
 
 ```json
 {
   "mcpServers": {
     "ableton": {
-      "command": "uv",
-      "args": ["run", "--directory", "/absolute/path/to/ableton-mcp", "ableton-mcp"]
+      "command": "uvx",
+      "args": ["ableton-ai"]
     }
   }
 }
 ```
 
-Restart Claude Desktop. You should see a tools icon appear in the chat box.
+Restart your AI client after either one, so it picks up the new server.
 
-## Your first prompt
+Finally, turn the remote script on in Ableton. Open Settings, then Link, Tempo & MIDI. Under Control Surface, pick AbletonMCP. Leave Input and Output on None.
 
-Open a throwaway Live set, not something you care about. Then paste this in:
+Ableton's status bar should flash `AbletonMCP: Listening for commands on port 9877`. If it doesn't, the remote script isn't installed, so rerun the first step and restart Live.
+
+## Getting started
+
+Open a Live set you don't mind messing up, then hand your assistant this:
 
 ```text
-You're driving my Ableton Live set through the AbletonMCP tools.
+You're controlling my Ableton Live set. You can't hear anything you make,
+so don't tell me it sounds good. Build what I ask, read the settings back
+to check they landed, and let me be the judge.
 
-Before you build anything, read the current state with get_session_info and
-get_track_info so you know what's already there.
+Some things in Live are dropdowns you can't set through the API: the LFO
+Map button, a Compressor's sidechain source, Drift's mod matrix routing.
+If you need one of those, tell me and I'll click it.
 
-Some things to keep in mind:
-
-You can't hear anything you make. So don't tell me something sounds good.
-Build it, verify the parameters actually took by reading them back, and let
-me judge the sound.
-
-Read a device's parameters with get_device_parameters before setting them.
-Don't guess at parameter names or ranges. Every device is different, and the
-value_string field tells you what Live actually prints on the knob.
-
-Anything that's a dropdown in Live's UI can't be set through the API. That
-includes the Max for Live LFO's Map button, a Compressor's sidechain source,
-and Drift's mod matrix routing. If a plan needs one of those, tell me and
-I'll click it.
-
-Now: create a MIDI track, load Drift on it, and make an ambient pad with a
-slow attack and a long release. Add an Auto Filter after it with a slow
-unsynced LFO on the cutoff. Write a chord as a 7 bar loop and fire it.
+To start: make a MIDI track, load Drift, and build an ambient pad with a
+slow attack and long release. Add a filter behind it with a slow LFO on
+the cutoff. Play a minor chord and loop it.
 ```
 
-That last paragraph is the actual request. Everything above it is context worth keeping around, so I'd suggest putting it in a `CLAUDE.md` in your project, or better, use the skill below.
+That first paragraph is worth keeping around. It saves you re-explaining the same things every session. Better still, install the skill below, which teaches your assistant all of this and more.
 
 ## The skill
 
-There's a skill in `skills/ableton` in this repo. It's a set of instructions that teaches Claude how to use these tools well: which parameter names each command actually wants, how to verify changes really landed, how to reach inside drum racks, and how to build generative patches with coprime loop lengths and note probability.
+If you use Claude Code, there's a skill in `skills/ableton` that teaches the assistant how to use these tools well: the parameter names each command expects, how to verify a change actually landed, how to reach inside drum racks, and how to build generative patches with coprime loops and note probability.
 
-It exists because I made every one of those mistakes myself and got tired of explaining them again in each new session.
-
-Install it by copying it into your skills folder:
+Install it:
 
 ```bash
 mkdir -p ~/.claude/skills
 cp -R skills/ableton ~/.claude/skills/
 ```
 
-Restart Claude Code. Then type `/ableton` or just ask for something musical, and it'll pick the skill up on its own.
+Restart Claude Code. It picks the skill up whenever you ask for something musical.
 
-For Claude Desktop, skills live in your project or in the Capabilities settings, depending on your setup. Copying the folder to `~/.claude/skills` covers Claude Code.
+## Editing the remote script
 
-## A warning worth reading
+If you change the remote script, Ableton needs a restart to load it, because Live caches the compiled bytecode. Save your set, copy the updated file into place, and restart Live. Toggling the Control Surface off and on is not reliable.
 
-The remote script opens an unauthenticated TCP socket on `localhost:9877`. It isn't reachable from the network, but any process running as your user can drive Ableton through it.
+## Safety
 
-The more realistic risk is Claude itself. It has 130 commands that change your project, and it can't hear what it's doing. It will occasionally clear an automation lane you cared about. Work on copies, save often, and lean on Cmd+Z, which covers most API operations.
+The remote script opens an unauthenticated socket on `localhost:9877`. It isn't reachable from the network, but any process running as you can drive Ableton through it.
 
-## What's different here
+The more practical point: the assistant has 130 commands that change your project, and it can't hear what it's doing. It will occasionally clear something you cared about. Work on copies, save often, and lean on Cmd+Z, which covers most operations.
 
-I added per note probability through `add_notes_with_probability`, because the rest of the codebase uses Live's legacy `clip.set_notes()` API, and that one has no probability field at all. Probability is most of what makes a generative patch worth listening to, so this mattered.
+## Testing
 
-I added `set_chain_device_parameter` and `get_chain_device_parameters` to reach devices nested inside racks. Before, a drum rack only handed you its own macros, which are usually unassigned, so a single drum pad's decay was untouchable.
+```bash
+uv sync --all-extras
+uv run pytest
+uv run ruff check src tests
+uv run mypy
+```
 
-`set_song_scale` and `get_song_scale_names` are new too. There was a getter for the song scale but no setter, which is a strange place to stop.
+## Credits
 
-On the fixes: `load_browser_item_to_return` crashed Live outright. It called `browser.load_item()` from the socket thread instead of Live's main thread, and mutating Live off the main thread is a guaranteed crash. It took my Live down before I found it.
+Built on the original AbletonMCP by [Siddharth Ahuja](https://github.com/ahujasid) and later work by [Jason Poindexter](https://github.com/jpoindexter), with thanks to [calclavia](https://github.com/calclavia) and [Ronbalt](https://github.com/Ronbalt).
 
-Clip automation used to target the wrong device. It matched a parameter by name across every device on the track and took the first hit, and names are shared constantly. Frequency exists on Auto Filter, Erosion, Reverb and Grain Delay. So you'd automate whichever device happened to come first and never know. It now takes a `device_index`, and an ambiguous name raises instead of guessing.
+## License
 
-`get_clip_automation` never returned the curve, only `has_automation: true`, which made automation impossible to verify. It samples the envelope now and gives you the real shape.
-
-`transpose_notes` silently destroyed probability by round tripping through the legacy API. `set_track_pan`, `set_track_volume` and `set_send_level` failed silently when you passed the wrong argument name, defaulting to a value and reporting success, which is how I once ran a whole session with every reverb send sitting at zero while being told it worked. And `_clear_clip_automation` was defined twice, so the first copy was dead code.
-
-Device parameters now include `value_string`, the text Live prints on the knob. Without it you get a bare float and no idea what `Transpose Mode = 0.0` means.
-
-## In closing
-
-You can find the code [on GitHub](https://github.com/freekmurze/ableton-mcp). If something breaks, open an issue.
-
-This is a fork, and the foundation isn't mine. [Siddharth Ahuja](https://github.com/ahujasid) wrote the [original](https://github.com/ahujasid/ableton-mcp): the concept, the socket based remote script, and the architecture all of this rests on. [Jason Poindexter](https://github.com/jpoindexter) built the [parent fork](https://github.com/jpoindexter/ableton-mcp), expanded the command surface enormously, added the REST API and the Max for Live device, and wrote the main thread marshalling that makes state changes safe in the first place. Thanks also to [calclavia](https://github.com/calclavia) and [Ronbalt](https://github.com/Ronbalt), whose commits are part of this history.
-
-What I added is narrow: probability, rack internals, and a handful of bugs I found by using the thing in anger. Everything underneath is theirs.
-
-It's MIT licensed, and not affiliated with Ableton.
+MIT. See [LICENSE](LICENSE).

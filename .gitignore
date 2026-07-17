@@ -14,3 +14,6 @@ wheels/
 .coverage
 .coverage.*
 htmlcov/
+
+# bundled at build time via force-include; source-tree copy for local dev only
+src/ableton_mcp/_remote_script/
