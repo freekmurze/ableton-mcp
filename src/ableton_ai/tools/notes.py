@@ -28,6 +28,44 @@ def add_notes_to_clip(
 
 
 @tool
+def add_notes_with_probability(
+    track_index: int,
+    clip_index: int,
+    notes: list[dict[str, int | float | bool]],
+    replace: bool = True,
+) -> str:
+    """
+    Add MIDI notes carrying per-note probability and velocity deviation.
+
+    Prefer this over add_notes_to_clip for anything generative. Plain
+    add_notes_to_clip uses Live's legacy API, which has no probability field
+    and silently drops it.
+
+    Parameters:
+    - track_index: The index of the track containing the clip
+    - clip_index: The index of the clip slot containing the clip
+    - notes: List of note dictionaries. Each takes pitch, start_time, duration,
+      velocity, mute, plus optional probability (0.0 to 1.0) and
+      velocity_deviation.
+    - replace: Replace existing notes in the clip (default True)
+    """
+    result = connection().send_command(
+        "add_notes_with_probability",
+        {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "notes": notes,
+            "replace": replace,
+        },
+    )
+    verified = result.get("verified_first_note")
+    return (
+        f"Added {result.get('note_count', len(notes))} notes with probability to "
+        f"track {track_index}, slot {clip_index}. Read back: {verified}"
+    )
+
+
+@tool
 def get_clip_notes(track_index: int, clip_index: int) -> str:
     """
     Get all MIDI notes from a clip.

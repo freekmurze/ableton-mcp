@@ -1,6 +1,6 @@
 """Tests for the MCP tool layer.
 
-The original server.py had 128 tools and zero tests. These cover the shared
+The original server.py had 133 tools and zero tests. These cover the shared
 machinery (registration, error handling, JSON rendering) and spot-check that
 representative tools call the connection the way the remote script expects.
 """
@@ -27,7 +27,7 @@ def fake_connection(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 
 def test_all_128_tools_register() -> None:
-    assert len(tools.REGISTRY) == 128
+    assert len(tools.REGISTRY) == 133
 
 
 def test_no_duplicate_tool_names() -> None:
@@ -43,8 +43,8 @@ def test_every_tool_is_documented() -> None:
 def test_register_all_reports_its_count() -> None:
     mcp = MagicMock()
     count = tools.register_all(mcp)
-    assert count == 128
-    assert mcp.tool.call_count == 128
+    assert count == 133
+    assert mcp.tool.call_count == 133
 
 
 # -- the @tool decorator's error handling ---------------------------------
@@ -138,3 +138,32 @@ def test_as_json_helper_handles_non_serialisable(_: Any = None) -> None:
             return "weird"
 
     assert "weird" in _base.as_json({"x": Weird()})
+
+
+def test_flagship_features_are_exposed_as_tools() -> None:
+    """Regression: probability, rack access, and scale setting were added to the
+    remote script but had no MCP tool, so Claude could not reach them."""
+    names = {fn.__name__ for fn in tools.REGISTRY}
+    for required in (
+        "add_notes_with_probability",
+        "get_chain_device_parameters",
+        "set_chain_device_parameter",
+        "get_song_scale_names",
+        "set_song_scale",
+    ):
+        assert required in names, f"{required} is not exposed as an MCP tool"
+
+
+def test_add_notes_with_probability_sends_notes(fake_connection: MagicMock) -> None:
+    from ableton_ai.tools import notes
+
+    fake_connection.send_command.return_value = {"note_count": 2, "verified_first_note": {"pitch": 60}}
+    out = notes.add_notes_with_probability(
+        track_index=0,
+        clip_index=0,
+        notes=[{"pitch": 60, "start_time": 0.0, "duration": 1.0, "velocity": 80, "probability": 0.5}],
+    )
+    cmd, params = fake_connection.send_command.call_args[0]
+    assert cmd == "add_notes_with_probability"
+    assert params["notes"][0]["probability"] == 0.5
+    assert "Read back" in out

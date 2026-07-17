@@ -394,3 +394,32 @@ def undo() -> str:
     if result.get("undone"):
         return "Undid last operation"
     return str(result.get("error", "Nothing to undo"))
+
+
+@tool
+def get_song_scale_names() -> str:
+    """
+    List the scale names Live accepts, plus the current scale and root note.
+
+    Useful before set_song_scale, so you pass a name Live recognises rather
+    than guessing.
+    """
+    result = connection().send_command("get_song_scale_names")
+    return as_json(result)
+
+
+@tool
+def set_song_scale(scale_name: str) -> str:
+    """
+    Set the song scale. Pair with set_song_root_note to set the key.
+
+    Use get_song_scale_names first to see the accepted names.
+
+    Parameters:
+    - scale_name: A scale name Live recognises, for example "Major", "Minor",
+      "Dorian", "Lydian".
+    """
+    result = connection().send_command("set_song_scale", {"scale_name": scale_name})
+    if result.get("error"):
+        return str(result["error"])
+    return f"Song scale set to {result.get('scale_name')} (root {result.get('root_note')})"

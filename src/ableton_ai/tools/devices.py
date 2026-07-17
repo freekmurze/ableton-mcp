@@ -181,3 +181,74 @@ def toggle_device(track_index: int, device_index: int) -> str:
     )
     state = "on" if result.get("is_active") else "off"
     return f"Toggled device '{result.get('device_name')}' {state}"
+
+
+@tool
+def get_chain_device_parameters(
+    track_index: int, device_index: int, chain_index: int, chain_device_index: int
+) -> str:
+    """
+    Get parameters of a device nested inside a rack chain, for example one drum
+    pad's synth.
+
+    Plain get_device_parameters on a rack only returns the rack's own macros,
+    which are usually unassigned. Use get_rack_chains first to find the chain
+    index, then this to reach the device inside it.
+
+    Parameters:
+    - track_index: The index of the track
+    - device_index: The index of the rack on the track
+    - chain_index: The index of the chain inside the rack
+    - chain_device_index: The index of the device inside that chain
+    """
+    result = connection().send_command(
+        "get_chain_device_parameters",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "chain_device_index": chain_device_index,
+        },
+    )
+    return as_json(result)
+
+
+@tool
+def set_chain_device_parameter(
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    chain_device_index: int,
+    parameter_name: str,
+    value: float,
+) -> str:
+    """
+    Set a parameter on a device nested inside a rack chain, for example a drum
+    pad's decay.
+
+    The parameter name is resolved within that one device only, so it cannot
+    grab a same-named parameter from elsewhere.
+
+    Parameters:
+    - track_index: The index of the track
+    - device_index: The index of the rack on the track
+    - chain_index: The index of the chain inside the rack
+    - chain_device_index: The index of the device inside that chain
+    - parameter_name: Name of the parameter to set
+    - value: The new value (clamped to the parameter's range)
+    """
+    result = connection().send_command(
+        "set_chain_device_parameter",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "chain_device_index": chain_device_index,
+            "parameter_name": parameter_name,
+            "value": value,
+        },
+    )
+    return (
+        f"Set {result.get('parameter_name')} on '{result.get('device_name')}' "
+        f"to {result.get('value')}"
+    )
