@@ -407,6 +407,7 @@ class AbletonAI(ControlSurface):
         "create_group_track": ("_wr_create_group_track", True),
         "create_locator": ("_wr_create_locator", True),
         "create_midi_track": ("_wr_create_midi_track", True),
+        "create_arrangement_midi_clip": ("_wr_create_arrangement_midi_clip", True),
         "create_return_track": ("_wr_create_return_track", True),
         "create_scene": ("_wr_create_scene", True),
         "delete_clip": ("_wr_delete_clip", True),
@@ -1249,6 +1250,16 @@ class AbletonAI(ControlSurface):
         time = params.get("time", 0.0)
         name = params.get("name", "")
         result = self._create_locator(time, name)
+        return result
+
+    def _wr_create_arrangement_midi_clip(self, params):
+        result = None
+        result = self._create_arrangement_midi_clip(
+            params.get("track_index", 0),
+            params.get("start_time", 0.0),
+            params.get("length", 4.0),
+            params.get("notes", []),
+        )
         return result
 
     def _wr_create_midi_track(self, params):
@@ -2252,6 +2263,55 @@ class AbletonAI(ControlSurface):
 
     
     # Command implementations
+
+    def _create_arrangement_midi_clip(self, track_index, start_time, length, notes=None):
+        """Create a MIDI clip in the Arrangement view and optionally fill it.
+
+        Session clips use clip_slot.create_clip(); the Arrangement view needs
+        Track.create_midi_clip(start_time, length), added in Live 11. Written
+        defensively because the exact signature has varied between versions.
+        """
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            track = self._song.tracks[track_index]
+            if not hasattr(track, "create_midi_clip"):
+                return {"error": "This Live version has no Track.create_midi_clip (needs Live 11+)"}
+            if hasattr(track, "has_midi_input") and not track.has_midi_input:
+                return {"error": "Track %d is not a MIDI track" % track_index}
+            try:
+                clip = track.create_midi_clip(start_time, length)
+            except TypeError:
+                clip = track.create_midi_clip(length)
+            added = 0
+            if notes and hasattr(clip, "add_new_notes"):
+                import Live
+                specs = []
+                for n in notes:
+                    kw = dict(pitch=int(n.get("pitch", 60)),
+                              start_time=float(n.get("start_time", 0.0)),
+                              duration=float(n.get("duration", 0.25)),
+                              velocity=float(n.get("velocity", 100)),
+                              mute=bool(n.get("mute", False)))
+                    spec = None
+                    if "probability" in n:
+                        try:
+                            spec = Live.Clip.MidiNoteSpecification(probability=float(n["probability"]), **kw)
+                        except TypeError:
+                            spec = None
+                    if spec is None:
+                        spec = Live.Clip.MidiNoteSpecification(**kw)
+                    specs.append(spec)
+                clip.add_new_notes(tuple(specs))
+                added = len(specs)
+            return {"created": True, "track_index": track_index,
+                    "start_time": getattr(clip, "start_time", start_time),
+                    "length": getattr(clip, "length", length),
+                    "notes_added": added}
+        except Exception as e:
+            self.log_message("Error create_arrangement_midi_clip: " + str(e))
+            return {"error": str(e)}
+
 
     # Validation helpers
     def _validate_track_index(self, track_index):

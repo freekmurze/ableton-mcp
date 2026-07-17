@@ -177,3 +177,41 @@ def toggle_arrangement_record() -> str:
     result = connection().send_command("toggle_arrangement_record")
     state = "on" if result.get("arrangement_record") else "off"
     return f"Arrangement record is now {state}"
+
+
+@tool
+def create_arrangement_midi_clip(
+    track_index: int,
+    start_time: float,
+    length: float,
+    notes: list[dict[str, int | float | bool]] | None = None,
+) -> str:
+    """
+    Create a MIDI clip in the Arrangement view, optionally filled with notes.
+
+    Session clips and Arrangement clips use different Live APIs. This is the
+    Arrangement path (Live 11+). Notes are optional and may carry probability,
+    same shape as add_notes_with_probability.
+
+    Parameters:
+    - track_index: The index of the MIDI track
+    - start_time: Where the clip starts in the arrangement, in beats
+    - length: Clip length in beats
+    - notes: Optional list of note dicts (pitch, start_time, duration, velocity,
+      mute, optional probability). Note start_time is relative to the clip.
+    """
+    result = connection().send_command(
+        "create_arrangement_midi_clip",
+        {
+            "track_index": track_index,
+            "start_time": start_time,
+            "length": length,
+            "notes": notes or [],
+        },
+    )
+    if result.get("error"):
+        return f"Could not create arrangement clip: {result['error']}"
+    return (
+        f"Created arrangement MIDI clip on track {track_index} at beat {start_time}, "
+        f"length {length}, with {result.get('notes_added', 0)} notes"
+    )
