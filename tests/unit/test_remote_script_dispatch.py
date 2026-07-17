@@ -105,6 +105,7 @@ def test_write_note_tuples_uses_modern_api_on_live11(instance: object) -> None:
         def remove_notes_extended(self, *a: object) -> None: ...
         def add_new_notes(self, specs: object) -> None:
             self.added = specs
+
         def set_notes(self, notes: object) -> None:
             self.set_notes_called = True
 
