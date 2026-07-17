@@ -3,31 +3,31 @@
 Integration tests that test complete workflows combining multiple operations.
 These tests verify that operations work together correctly.
 """
+
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock, call
-import json
-import sys
-import os
 
 # Add project path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'MCP_Server'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "MCP_Server"))
 
 
 def create_test_client():
     """Create a fresh test client with mocked Ableton connection."""
-    with patch.dict(os.environ, {
-        "RATE_LIMIT_ENABLED": "false",
-        "REST_API_KEY": ""
-    }):
+    with patch.dict(os.environ, {"RATE_LIMIT_ENABLED": "false", "REST_API_KEY": ""}):
         mock_conn = MagicMock()
         mock_conn.send_command.return_value = {}
 
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_conn
 
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
             rest_api_server.ableton = mock_conn
 
@@ -37,6 +37,7 @@ def create_test_client():
 # =============================================================================
 # Basic Workflow Tests
 # =============================================================================
+
 
 class TestBasicWorkflow:
     """Test basic music production workflows."""
@@ -55,25 +56,26 @@ class TestBasicWorkflow:
 
         # Step 2: Create clip
         self.mock_ableton.send_command.return_value = {"name": "Clip 1", "length": 4.0}
-        response = self.client.post("/api/tracks/0/clips/0", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "length": 4.0,
-            "name": "My Clip"
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0",
+            json={"track_index": 0, "clip_index": 0, "length": 4.0, "name": "My Clip"},
+        )
         assert response.status_code == 200
 
         # Step 3: Add notes
         self.mock_ableton.send_command.return_value = {"notes_added": 3}
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [
-                {"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100},
-                {"pitch": 64, "start_time": 0.5, "duration": 0.5, "velocity": 100},
-                {"pitch": 67, "start_time": 1.0, "duration": 0.5, "velocity": 100}
-            ]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [
+                    {"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100},
+                    {"pitch": 64, "start_time": 0.5, "duration": 0.5, "velocity": 100},
+                    {"pitch": 67, "start_time": 1.0, "duration": 0.5, "velocity": 100},
+                ],
+            },
+        )
         assert response.status_code == 200
 
         # Step 4: Fire clip
@@ -94,12 +96,10 @@ class TestBasicWorkflow:
 
         # Generate drum pattern
         self.mock_ableton.send_command.return_value = {"pattern_created": True}
-        response = self.client.post("/api/music/drums", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "style": "house",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/drums",
+            json={"track_index": 0, "clip_index": 0, "style": "house", "length": 4.0},
+        )
         assert response.status_code == 200
 
     def test_create_bassline_track(self):
@@ -111,19 +111,23 @@ class TestBasicWorkflow:
 
         # Generate bassline
         self.mock_ableton.send_command.return_value = {"bassline_created": True}
-        response = self.client.post("/api/music/bassline", json={
-            "track_index": 1,
-            "clip_index": 0,
-            "root": 36,
-            "scale_type": "minor",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/bassline",
+            json={
+                "track_index": 1,
+                "clip_index": 0,
+                "root": 36,
+                "scale_type": "minor",
+                "length": 4.0,
+            },
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Transport Control Workflow Tests
 # =============================================================================
+
 
 class TestTransportWorkflow:
     """Test transport control workflows."""
@@ -182,6 +186,7 @@ class TestTransportWorkflow:
 # Mixing Workflow Tests
 # =============================================================================
 
+
 class TestMixingWorkflow:
     """Test mixing workflow scenarios."""
 
@@ -219,35 +224,28 @@ class TestMixingWorkflow:
         """Test setting up send effects."""
         # Get return tracks
         self.mock_ableton.send_command.return_value = {
-            "return_tracks": [
-                {"index": 0, "name": "Return A"},
-                {"index": 1, "name": "Return B"}
-            ]
+            "return_tracks": [{"index": 0, "name": "Return A"}, {"index": 1, "name": "Return B"}]
         }
         response = self.client.get("/api/returns")
         assert response.status_code == 200
 
         # Set send levels
         self.mock_ableton.send_command.return_value = {"level": 0.5}
-        response = self.client.post("/api/tracks/0/sends/0", json={
-            "track_index": 0,
-            "send_index": 0,
-            "level": 0.5
-        })
+        response = self.client.post(
+            "/api/tracks/0/sends/0", json={"track_index": 0, "send_index": 0, "level": 0.5}
+        )
         assert response.status_code == 200
 
         # Set return volume
         self.mock_ableton.send_command.return_value = {"volume": 0.8}
-        response = self.client.put("/api/returns/0/volume", json={
-            "return_index": 0,
-            "volume": 0.8
-        })
+        response = self.client.put("/api/returns/0/volume", json={"return_index": 0, "volume": 0.8})
         assert response.status_code == 200
 
 
 # =============================================================================
 # Scene Workflow Tests
 # =============================================================================
+
 
 class TestSceneWorkflow:
     """Test scene-based workflow scenarios."""
@@ -287,16 +285,16 @@ class TestSceneWorkflow:
 
         # Rename duplicated scene
         self.mock_ableton.send_command.return_value = {"name": "Chorus 2"}
-        response = self.client.put("/api/scenes/1/name", json={
-            "scene_index": 1,
-            "name": "Chorus 2"
-        })
+        response = self.client.put(
+            "/api/scenes/1/name", json={"scene_index": 1, "name": "Chorus 2"}
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Clip Editing Workflow Tests
 # =============================================================================
+
 
 class TestClipEditingWorkflow:
     """Test clip editing workflows."""
@@ -310,58 +308,53 @@ class TestClipEditingWorkflow:
         """Test quantizing then humanizing notes."""
         # Get existing notes
         self.mock_ableton.send_command.return_value = {
-            "notes": [
-                {"pitch": 60, "start_time": 0.1, "duration": 0.5, "velocity": 100}
-            ]
+            "notes": [{"pitch": 60, "start_time": 0.1, "duration": 0.5, "velocity": 100}]
         }
         response = self.client.get("/api/tracks/0/clips/0/notes")
         assert response.status_code == 200
 
         # Quantize notes
         self.mock_ableton.send_command.return_value = {"quantized": True}
-        response = self.client.post("/api/tracks/0/clips/0/quantize", json={
-            "grid": 0.25,
-            "strength": 1.0
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/quantize", json={"grid": 0.25, "strength": 1.0}
+        )
         assert response.status_code == 200
 
         # Humanize timing
         self.mock_ableton.send_command.return_value = {"humanized": True}
-        response = self.client.post("/api/tracks/0/clips/0/humanize/timing", json={
-            "amount": 0.05
-        })
+        response = self.client.post("/api/tracks/0/clips/0/humanize/timing", json={"amount": 0.05})
         assert response.status_code == 200
 
         # Humanize velocity
         self.mock_ableton.send_command.return_value = {"humanized": True}
-        response = self.client.post("/api/tracks/0/clips/0/humanize/velocity", json={
-            "amount": 0.1
-        })
+        response = self.client.post("/api/tracks/0/clips/0/humanize/velocity", json={"amount": 0.1})
         assert response.status_code == 200
 
     def test_transpose_workflow(self):
         """Test transposing clip notes."""
         # Add notes
         self.mock_ableton.send_command.return_value = {"notes_added": 4}
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [
-                {"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100},
-                {"pitch": 62, "start_time": 0.5, "duration": 0.5, "velocity": 100},
-                {"pitch": 64, "start_time": 1.0, "duration": 0.5, "velocity": 100},
-                {"pitch": 65, "start_time": 1.5, "duration": 0.5, "velocity": 100}
-            ]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [
+                    {"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100},
+                    {"pitch": 62, "start_time": 0.5, "duration": 0.5, "velocity": 100},
+                    {"pitch": 64, "start_time": 1.0, "duration": 0.5, "velocity": 100},
+                    {"pitch": 65, "start_time": 1.5, "duration": 0.5, "velocity": 100},
+                ],
+            },
+        )
         assert response.status_code == 200
 
         # Transpose up an octave
         self.mock_ableton.send_command.return_value = {"transposed": True}
-        response = self.client.post("/api/tracks/0/clips/0/transpose", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "semitones": 12
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/transpose",
+            json={"track_index": 0, "clip_index": 0, "semitones": 12},
+        )
         assert response.status_code == 200
 
     def test_loop_editing_workflow(self):
@@ -370,7 +363,7 @@ class TestClipEditingWorkflow:
         self.mock_ableton.send_command.return_value = {
             "looping": True,
             "loop_start": 0.0,
-            "loop_end": 4.0
+            "loop_end": 4.0,
         }
         response = self.client.get("/api/tracks/0/clips/0/loop")
         assert response.status_code == 200
@@ -379,21 +372,25 @@ class TestClipEditingWorkflow:
         self.mock_ableton.send_command.return_value = {
             "looping": True,
             "loop_start": 0.0,
-            "loop_end": 8.0
-        }
-        response = self.client.put("/api/tracks/0/clips/0/loop", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "loop_start": 0.0,
             "loop_end": 8.0,
-            "looping": True
-        })
+        }
+        response = self.client.put(
+            "/api/tracks/0/clips/0/loop",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "loop_start": 0.0,
+                "loop_end": 8.0,
+                "looping": True,
+            },
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Device Manipulation Workflow Tests
 # =============================================================================
+
 
 class TestDeviceWorkflow:
     """Test device manipulation workflows."""
@@ -410,8 +407,8 @@ class TestDeviceWorkflow:
             "name": "Auto Filter",
             "parameters": [
                 {"name": "Device On", "value": 1.0, "min": 0.0, "max": 1.0},
-                {"name": "Frequency", "value": 1000.0, "min": 20.0, "max": 20000.0}
-            ]
+                {"name": "Frequency", "value": 1000.0, "min": 20.0, "max": 20000.0},
+            ],
         }
         response = self.client.get("/api/tracks/0/devices/0")
         assert response.status_code == 200
@@ -419,38 +416,35 @@ class TestDeviceWorkflow:
         # Modify parameter - DeviceParamRequest requires all fields
         # value must be normalized (0-1)
         self.mock_ableton.send_command.return_value = {"value": 0.5}
-        response = self.client.put("/api/tracks/0/devices/0/parameter", json={
-            "track_index": 0,
-            "device_index": 0,
-            "parameter_index": 1,
-            "value": 0.5
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/parameter",
+            json={"track_index": 0, "device_index": 0, "parameter_index": 1, "value": 0.5},
+        )
         assert response.status_code == 200
 
     def test_device_bypass_workflow(self):
         """Test bypassing devices."""
         # Toggle device off - DeviceToggleRequest requires track/device index
         self.mock_ableton.send_command.return_value = {"enabled": False}
-        response = self.client.put("/api/tracks/0/devices/0/toggle", json={
-            "track_index": 0,
-            "device_index": 0,
-            "enabled": False
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/toggle",
+            json={"track_index": 0, "device_index": 0, "enabled": False},
+        )
         assert response.status_code == 200
 
         # Toggle device back on
         self.mock_ableton.send_command.return_value = {"enabled": True}
-        response = self.client.put("/api/tracks/0/devices/0/toggle", json={
-            "track_index": 0,
-            "device_index": 0,
-            "enabled": True
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/toggle",
+            json={"track_index": 0, "device_index": 0, "enabled": True},
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Browser Workflow Tests
 # =============================================================================
+
 
 class TestBrowserWorkflow:
     """Test browser and loading workflows."""
@@ -466,49 +460,45 @@ class TestBrowserWorkflow:
         self.mock_ableton.send_command.return_value = {
             "results": [
                 {"name": "Analog", "uri": "browser://instrument/analog"},
-                {"name": "Wavetable", "uri": "browser://instrument/wavetable"}
+                {"name": "Wavetable", "uri": "browser://instrument/wavetable"},
             ]
         }
-        response = self.client.post("/api/browser/search", json={
-            "query": "synth",
-            "category": "instruments"
-        })
+        response = self.client.post(
+            "/api/browser/search", json={"query": "synth", "category": "instruments"}
+        )
         assert response.status_code == 200
 
         # Load instrument to track
         self.mock_ableton.send_command.return_value = {"loaded": True}
-        response = self.client.post("/api/browser/load", json={
-            "track_index": 0,
-            "uri": "browser://instrument/analog"
-        })
+        response = self.client.post(
+            "/api/browser/load", json={"track_index": 0, "uri": "browser://instrument/analog"}
+        )
         assert response.status_code == 200
 
     def test_load_effect_to_return(self):
         """Test loading effect to return track."""
         # Search for effect
         self.mock_ableton.send_command.return_value = {
-            "results": [
-                {"name": "Reverb", "uri": "browser://effect/reverb"}
-            ]
+            "results": [{"name": "Reverb", "uri": "browser://effect/reverb"}]
         }
-        response = self.client.post("/api/browser/search", json={
-            "query": "reverb",
-            "category": "audio_effects"
-        })
+        response = self.client.post(
+            "/api/browser/search", json={"query": "reverb", "category": "audio_effects"}
+        )
         assert response.status_code == 200
 
         # Load to return track
         self.mock_ableton.send_command.return_value = {"loaded": True}
-        response = self.client.post("/api/browser/load-to-return", json={
-            "return_index": 0,
-            "uri": "browser://effect/reverb"
-        })
+        response = self.client.post(
+            "/api/browser/load-to-return",
+            json={"return_index": 0, "uri": "browser://effect/reverb"},
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Undo/Redo Workflow Tests
 # =============================================================================
+
 
 class TestUndoRedoWorkflow:
     """Test undo/redo workflows."""
@@ -539,6 +529,7 @@ class TestUndoRedoWorkflow:
 # =============================================================================
 # Complete Song Creation Workflow
 # =============================================================================
+
 
 class TestCompleteSongWorkflow:
     """Test complete song creation workflow."""
@@ -572,55 +563,56 @@ class TestCompleteSongWorkflow:
 
         # Generate drum pattern
         self.mock_ableton.send_command.return_value = {"pattern_created": True}
-        response = self.client.post("/api/music/drums", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "style": "house",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/drums",
+            json={"track_index": 0, "clip_index": 0, "style": "house", "length": 4.0},
+        )
         assert response.status_code == 200
 
         # Generate bassline
         self.mock_ableton.send_command.return_value = {"bassline_created": True}
-        response = self.client.post("/api/music/bassline", json={
-            "track_index": 1,
-            "clip_index": 0,
-            "root": 36,
-            "scale_type": "minor",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/bassline",
+            json={
+                "track_index": 1,
+                "clip_index": 0,
+                "root": 36,
+                "scale_type": "minor",
+                "length": 4.0,
+            },
+        )
         assert response.status_code == 200
 
         # Create lead clip with notes
         self.mock_ableton.send_command.return_value = {"created": True}
-        response = self.client.post("/api/tracks/2/clips/0", json={
-            "track_index": 2,
-            "clip_index": 0,
-            "length": 4.0,
-            "name": "Lead"
-        })
+        response = self.client.post(
+            "/api/tracks/2/clips/0",
+            json={"track_index": 2, "clip_index": 0, "length": 4.0, "name": "Lead"},
+        )
         assert response.status_code == 200
 
         # Add lead notes
         self.mock_ableton.send_command.return_value = {"notes_added": 4}
-        response = self.client.post("/api/tracks/2/clips/0/notes", json={
-            "track_index": 2,
-            "clip_index": 0,
-            "notes": [
-                {"pitch": 72, "start_time": 0.0, "duration": 1.0, "velocity": 100},
-                {"pitch": 74, "start_time": 1.0, "duration": 0.5, "velocity": 90},
-                {"pitch": 76, "start_time": 1.5, "duration": 0.5, "velocity": 95},
-                {"pitch": 79, "start_time": 2.0, "duration": 2.0, "velocity": 100}
-            ]
-        })
+        response = self.client.post(
+            "/api/tracks/2/clips/0/notes",
+            json={
+                "track_index": 2,
+                "clip_index": 0,
+                "notes": [
+                    {"pitch": 72, "start_time": 0.0, "duration": 1.0, "velocity": 100},
+                    {"pitch": 74, "start_time": 1.0, "duration": 0.5, "velocity": 90},
+                    {"pitch": 76, "start_time": 1.5, "duration": 0.5, "velocity": 95},
+                    {"pitch": 79, "start_time": 2.0, "duration": 2.0, "velocity": 100},
+                ],
+            },
+        )
         assert response.status_code == 200
 
         # Create scene and name it
         self.mock_ableton.send_command.return_value = {"index": 0, "name": "Main Loop"}
-        response = self.client.put("/api/scenes/0/name", json={
-            "scene_index": 0,
-            "name": "Main Loop"
-        })
+        response = self.client.put(
+            "/api/scenes/0/name", json={"scene_index": 0, "name": "Main Loop"}
+        )
         assert response.status_code == 200
 
         # Fire scene to play all clips

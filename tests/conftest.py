@@ -3,25 +3,27 @@
 Comprehensive test fixtures for AbletonMCP testing.
 Provides mocks for socket connections, Ableton responses, and API clients.
 """
-import pytest
-import sys
-import os
+
 import json
-import time
-from unittest.mock import patch, MagicMock, PropertyMock
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add project paths for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'MCP_Server'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "MCP_Server"))
 
 
 # =============================================================================
 # Socket and Connection Mocks
 # =============================================================================
 
+
 @pytest.fixture
 def mock_socket(mocker):
     """Mock socket for testing without real Ableton connection."""
-    mock = mocker.patch('socket.socket')
+    mock = mocker.patch("socket.socket")
     mock_instance = mock.return_value
     mock_instance.connect.return_value = None
     mock_instance.sendall.return_value = None
@@ -34,19 +36,19 @@ def mock_socket(mocker):
 @pytest.fixture
 def mock_socket_timeout(mocker):
     """Mock socket that raises timeout."""
-    import socket
-    mock = mocker.patch('socket.socket')
+
+    mock = mocker.patch("socket.socket")
     mock_instance = mock.return_value
     mock_instance.connect.return_value = None
     mock_instance.sendall.return_value = None
-    mock_instance.recv.side_effect = socket.timeout("Connection timed out")
+    mock_instance.recv.side_effect = TimeoutError("Connection timed out")
     return mock_instance
 
 
 @pytest.fixture
 def mock_socket_connection_error(mocker):
     """Mock socket that raises connection error."""
-    mock = mocker.patch('socket.socket')
+    mock = mocker.patch("socket.socket")
     mock_instance = mock.return_value
     mock_instance.connect.side_effect = ConnectionRefusedError("Connection refused")
     return mock_instance
@@ -55,11 +57,11 @@ def mock_socket_connection_error(mocker):
 @pytest.fixture
 def mock_socket_invalid_json(mocker):
     """Mock socket that returns invalid JSON."""
-    mock = mocker.patch('socket.socket')
+    mock = mocker.patch("socket.socket")
     mock_instance = mock.return_value
     mock_instance.connect.return_value = None
     mock_instance.sendall.return_value = None
-    mock_instance.recv.return_value = b'not valid json {'
+    mock_instance.recv.return_value = b"not valid json {"
     return mock_instance
 
 
@@ -67,9 +69,11 @@ def mock_socket_invalid_json(mocker):
 # Ableton Response Factories
 # =============================================================================
 
+
 @pytest.fixture
 def mock_ableton_response():
     """Factory for creating mock Ableton responses."""
+
     def _create_response(status="success", result=None, error=None):
         response = {"status": status}
         if result is not None:
@@ -78,30 +82,36 @@ def mock_ableton_response():
             response["error"] = error
             response["message"] = error
         return response
+
     return _create_response
 
 
 @pytest.fixture
 def mock_ableton_success_response():
     """Creates a successful Ableton response bytes object."""
+
     def _create(result=None):
         response = {"status": "success", "result": result or {}}
-        return json.dumps(response).encode('utf-8')
+        return json.dumps(response).encode("utf-8")
+
     return _create
 
 
 @pytest.fixture
 def mock_ableton_error_response():
     """Creates an error Ableton response bytes object."""
+
     def _create(message="Unknown error"):
         response = {"status": "error", "message": message}
-        return json.dumps(response).encode('utf-8')
+        return json.dumps(response).encode("utf-8")
+
     return _create
 
 
 # =============================================================================
 # Sample Data Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def sample_track_info():
@@ -118,7 +128,7 @@ def sample_track_info():
         "panning": 0.0,
         "color": 16725558,
         "clip_slots": [],
-        "devices": []
+        "devices": [],
     }
 
 
@@ -137,7 +147,7 @@ def sample_clip_info():
         "looping": True,
         "loop_start": 0.0,
         "loop_end": 4.0,
-        "color": 16725558
+        "color": 16725558,
     }
 
 
@@ -152,7 +162,7 @@ def sample_session_info():
         "track_count": 8,
         "scene_count": 8,
         "return_track_count": 2,
-        "master_track": {"name": "Master", "volume": 1.0}
+        "master_track": {"name": "Master", "volume": 1.0},
     }
 
 
@@ -162,7 +172,7 @@ def sample_notes():
     return [
         {"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100},
         {"pitch": 64, "start_time": 0.5, "duration": 0.5, "velocity": 100},
-        {"pitch": 67, "start_time": 1.0, "duration": 0.5, "velocity": 100}
+        {"pitch": 67, "start_time": 1.0, "duration": 0.5, "velocity": 100},
     ]
 
 
@@ -175,37 +185,27 @@ def sample_device_info():
         "is_active": True,
         "parameters": [
             {"name": "Device On", "value": 1.0, "min": 0.0, "max": 1.0},
-            {"name": "Dry/Wet", "value": 1.0, "min": 0.0, "max": 1.0}
-        ]
+            {"name": "Dry/Wet", "value": 1.0, "min": 0.0, "max": 1.0},
+        ],
     }
 
 
 @pytest.fixture
 def sample_scene_info():
     """Sample scene info response."""
-    return {
-        "index": 0,
-        "name": "Scene 1",
-        "color": 16725558,
-        "is_triggered": False
-    }
+    return {"index": 0, "name": "Scene 1", "color": 16725558, "is_triggered": False}
 
 
 @pytest.fixture
 def sample_return_track_info():
     """Sample return track info response."""
-    return {
-        "index": 0,
-        "name": "Return A",
-        "volume": 0.85,
-        "panning": 0.0,
-        "devices": []
-    }
+    return {"index": 0, "name": "Return A", "volume": 0.85, "panning": 0.0, "devices": []}
 
 
 # =============================================================================
 # FastAPI Test Client Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_ableton_connection():
@@ -219,22 +219,22 @@ def mock_ableton_connection():
 def client(mock_ableton_connection):
     """Create a test client with mocked Ableton connection."""
     # We need to patch at module level before importing
-    with patch.dict(os.environ, {
-        "RATE_LIMIT_ENABLED": "false",
-        "REST_API_KEY": ""
-    }):
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+    with patch.dict(os.environ, {"RATE_LIMIT_ENABLED": "false", "REST_API_KEY": ""}):
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_ableton_connection
 
             # Need to reload module to pick up new environment
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
 
             # Re-patch the global ableton connection
             rest_api_server.ableton = mock_ableton_connection
 
             from fastapi.testclient import TestClient
+
             yield TestClient(rest_api_server.app), mock_ableton_connection
 
 
@@ -243,46 +243,52 @@ def client_with_auth():
     """Create a test client with API key authentication enabled."""
     test_api_key = "test-secret-key-12345"
 
-    with patch.dict(os.environ, {
-        "REST_API_KEY": test_api_key,
-        "RATE_LIMIT_ENABLED": "false"
-    }):
+    with patch.dict(os.environ, {"REST_API_KEY": test_api_key, "RATE_LIMIT_ENABLED": "false"}):
         mock_conn = MagicMock()
         mock_conn.send_command.return_value = {}
 
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_conn
 
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
             rest_api_server.ableton = mock_conn
 
             from fastapi.testclient import TestClient
+
             yield TestClient(rest_api_server.app), mock_conn, test_api_key
 
 
 @pytest.fixture
 def client_with_rate_limit():
     """Create a test client with rate limiting enabled."""
-    with patch.dict(os.environ, {
-        "RATE_LIMIT_ENABLED": "true",
-        "RATE_LIMIT_REQUESTS": "5",
-        "RATE_LIMIT_WINDOW": "60",
-        "REST_API_KEY": ""
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "RATE_LIMIT_ENABLED": "true",
+            "RATE_LIMIT_REQUESTS": "5",
+            "RATE_LIMIT_WINDOW": "60",
+            "REST_API_KEY": "",
+        },
+    ):
         mock_conn = MagicMock()
         mock_conn.send_command.return_value = {}
 
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_conn
 
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
             rest_api_server.ableton = mock_conn
 
             from fastapi.testclient import TestClient
+
             yield TestClient(rest_api_server.app), mock_conn
 
 
@@ -291,31 +297,31 @@ def client_disconnected():
     """Create a test client where Ableton is disconnected."""
     from fastapi import HTTPException
 
-    with patch.dict(os.environ, {
-        "RATE_LIMIT_ENABLED": "false",
-        "REST_API_KEY": ""
-    }):
+    with patch.dict(os.environ, {"RATE_LIMIT_ENABLED": "false", "REST_API_KEY": ""}):
         mock_conn = MagicMock()
         mock_conn.send_command.side_effect = HTTPException(
-            status_code=503,
-            detail="Could not connect to Ableton"
+            status_code=503, detail="Could not connect to Ableton"
         )
 
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_conn
 
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
             rest_api_server.ableton = mock_conn
 
             from fastapi.testclient import TestClient
+
             yield TestClient(rest_api_server.app), mock_conn
 
 
 # =============================================================================
 # Utility Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def valid_note():

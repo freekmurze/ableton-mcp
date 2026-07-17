@@ -3,35 +3,36 @@
 Comprehensive tests for ALL REST API endpoints in AbletonMCP.
 Tests cover valid inputs, invalid inputs, and error conditions.
 """
+
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-import json
-import sys
-import os
 
 # Add project path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'MCP_Server'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "MCP_Server"))
 
 
 # =============================================================================
 # Test Setup Helper
 # =============================================================================
 
+
 def create_test_client():
     """Create a fresh test client with mocked Ableton connection."""
-    with patch.dict(os.environ, {
-        "RATE_LIMIT_ENABLED": "false",
-        "REST_API_KEY": ""
-    }):
+    with patch.dict(os.environ, {"RATE_LIMIT_ENABLED": "false", "REST_API_KEY": ""}):
         mock_conn = MagicMock()
         mock_conn.send_command.return_value = {}
 
-        with patch('rest_api_server.AbletonConnection') as MockClass:
+        with patch("rest_api_server.AbletonConnection") as MockClass:
             MockClass.return_value = mock_conn
 
             import importlib
+
             import rest_api_server
+
             importlib.reload(rest_api_server)
             rest_api_server.ableton = mock_conn
 
@@ -41,6 +42,7 @@ def create_test_client():
 # =============================================================================
 # Transport Endpoints
 # =============================================================================
+
 
 class TestTransportEndpoints:
     """Test all transport-related endpoints."""
@@ -155,6 +157,7 @@ class TestTransportEndpoints:
 # Track Endpoints
 # =============================================================================
 
+
 class TestTrackEndpoints:
     """Test all track-related endpoints."""
 
@@ -244,7 +247,9 @@ class TestTrackEndpoints:
 
     def test_set_track_name(self):
         """Test PUT /api/tracks/{track_index}/name."""
-        response = self.client.put("/api/tracks/0/name", json={"track_index": 0, "name": "New Name"})
+        response = self.client.put(
+            "/api/tracks/0/name", json={"track_index": 0, "name": "New Name"}
+        )
         assert response.status_code == 200
 
     def test_get_track_color(self):
@@ -350,6 +355,7 @@ class TestTrackEndpoints:
 # Clip Endpoints
 # =============================================================================
 
+
 class TestClipEndpoints:
     """Test all clip-related endpoints."""
 
@@ -377,71 +383,64 @@ class TestClipEndpoints:
 
     def test_create_clip(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}."""
-        response = self.client.post("/api/tracks/0/clips/0", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0", json={"track_index": 0, "clip_index": 0, "length": 4.0}
+        )
         assert response.status_code == 200
 
     def test_create_clip_with_name(self):
         """Test creating clip with custom name."""
-        response = self.client.post("/api/tracks/0/clips/0", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "length": 8.0,
-            "name": "My Clip"
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0",
+            json={"track_index": 0, "clip_index": 0, "length": 8.0, "name": "My Clip"},
+        )
         assert response.status_code == 200
 
     def test_create_clip_default_length(self):
         """Test creating clip with default length."""
-        response = self.client.post("/api/tracks/0/clips/0", json={
-            "track_index": 0,
-            "clip_index": 0
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0", json={"track_index": 0, "clip_index": 0}
+        )
         assert response.status_code == 200
 
     def test_delete_clip(self):
         """Test DELETE /api/tracks/{track_index}/clips/{clip_index}."""
         response = self.client.delete("/api/tracks/0/clips/0")
         assert response.status_code == 200
-        self.mock_ableton.send_command.assert_called_with("delete_clip", {
-            "track_index": 0, "clip_index": 0
-        })
+        self.mock_ableton.send_command.assert_called_with(
+            "delete_clip", {"track_index": 0, "clip_index": 0}
+        )
 
     def test_fire_clip(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/fire."""
         response = self.client.post("/api/tracks/0/clips/0/fire")
         assert response.status_code == 200
-        self.mock_ableton.send_command.assert_called_with("fire_clip", {
-            "track_index": 0, "clip_index": 0
-        })
+        self.mock_ableton.send_command.assert_called_with(
+            "fire_clip", {"track_index": 0, "clip_index": 0}
+        )
 
     def test_stop_clip(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/stop."""
         response = self.client.post("/api/tracks/0/clips/0/stop")
         assert response.status_code == 200
-        self.mock_ableton.send_command.assert_called_with("stop_clip", {
-            "track_index": 0, "clip_index": 0
-        })
+        self.mock_ableton.send_command.assert_called_with(
+            "stop_clip", {"track_index": 0, "clip_index": 0}
+        )
 
     def test_duplicate_clip(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/duplicate."""
-        response = self.client.post("/api/tracks/0/clips/0/duplicate", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "target_index": 1
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/duplicate",
+            json={"track_index": 0, "clip_index": 0, "target_index": 1},
+        )
         assert response.status_code == 200
 
     def test_set_clip_name(self):
         """Test PUT /api/tracks/{track_index}/clips/{clip_index}/name."""
-        response = self.client.put("/api/tracks/0/clips/0/name", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "name": "New Clip Name"
-        })
+        response = self.client.put(
+            "/api/tracks/0/clips/0/name",
+            json={"track_index": 0, "clip_index": 0, "name": "New Clip Name"},
+        )
         assert response.status_code == 200
 
     def test_get_clip_color(self):
@@ -453,30 +452,33 @@ class TestClipEndpoints:
     def test_set_clip_color(self):
         """Test PUT /api/tracks/{track_index}/clips/{clip_index}/color."""
         # ClipColorRequest requires track_index, clip_index, and color (0-69)
-        response = self.client.put("/api/tracks/0/clips/0/color", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "color": 10
-        })
+        response = self.client.put(
+            "/api/tracks/0/clips/0/color", json={"track_index": 0, "clip_index": 0, "color": 10}
+        )
         assert response.status_code == 200
 
     def test_get_clip_loop(self):
         """Test GET /api/tracks/{track_index}/clips/{clip_index}/loop."""
         self.mock_ableton.send_command.return_value = {
-            "looping": True, "loop_start": 0.0, "loop_end": 4.0
+            "looping": True,
+            "loop_start": 0.0,
+            "loop_end": 4.0,
         }
         response = self.client.get("/api/tracks/0/clips/0/loop")
         assert response.status_code == 200
 
     def test_set_clip_loop(self):
         """Test PUT /api/tracks/{track_index}/clips/{clip_index}/loop."""
-        response = self.client.put("/api/tracks/0/clips/0/loop", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "loop_start": 0.0,
-            "loop_end": 8.0,
-            "looping": True
-        })
+        response = self.client.put(
+            "/api/tracks/0/clips/0/loop",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "loop_start": 0.0,
+                "loop_end": 8.0,
+                "looping": True,
+            },
+        )
         assert response.status_code == 200
 
     def test_select_clip(self):
@@ -488,6 +490,7 @@ class TestClipEndpoints:
 # =============================================================================
 # Note Endpoints
 # =============================================================================
+
 
 class TestNoteEndpoints:
     """Test all note-related endpoints."""
@@ -505,115 +508,133 @@ class TestNoteEndpoints:
 
     def test_add_notes_valid(self, valid_note):
         """Test adding valid notes."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [valid_note]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={"track_index": 0, "clip_index": 0, "notes": [valid_note]},
+        )
         assert response.status_code == 200
 
     def test_add_notes_multiple(self, sample_notes):
         """Test adding multiple notes."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": sample_notes
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={"track_index": 0, "clip_index": 0, "notes": sample_notes},
+        )
         assert response.status_code == 200
 
     def test_add_notes_invalid_pitch_too_high(self):
         """Test note with pitch > 127 returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 128, "start_time": 0.0, "duration": 0.5, "velocity": 100}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 128, "start_time": 0.0, "duration": 0.5, "velocity": 100}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_invalid_pitch_negative(self):
         """Test note with negative pitch returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": -1, "start_time": 0.0, "duration": 0.5, "velocity": 100}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": -1, "start_time": 0.0, "duration": 0.5, "velocity": 100}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_invalid_velocity_too_high(self):
         """Test note with velocity > 127 returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 128}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 128}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_invalid_duration_zero(self):
         """Test note with zero duration returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.0, "velocity": 100}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.0, "velocity": 100}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_invalid_duration_negative(self):
         """Test note with negative duration returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 60, "start_time": 0.0, "duration": -0.5, "velocity": 100}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 60, "start_time": 0.0, "duration": -0.5, "velocity": 100}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_invalid_start_time_negative(self):
         """Test note with negative start_time returns 422."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 60, "start_time": -1.0, "duration": 0.5, "velocity": 100}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 60, "start_time": -1.0, "duration": 0.5, "velocity": 100}],
+            },
+        )
         assert response.status_code == 422
 
     def test_add_notes_default_velocity(self):
         """Test note without velocity uses default."""
-        response = self.client.post("/api/tracks/0/clips/0/notes", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.5}]
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/notes",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "notes": [{"pitch": 60, "start_time": 0.0, "duration": 0.5}],
+            },
+        )
         assert response.status_code == 200
 
     def test_remove_all_notes(self):
         """Test DELETE /api/tracks/{track_index}/clips/{clip_index}/notes."""
         response = self.client.delete("/api/tracks/0/clips/0/notes")
         assert response.status_code == 200
-        self.mock_ableton.send_command.assert_called_with("remove_all_notes", {
-            "track_index": 0, "clip_index": 0
-        })
+        self.mock_ableton.send_command.assert_called_with(
+            "remove_all_notes", {"track_index": 0, "clip_index": 0}
+        )
 
     def test_transpose_notes(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/transpose."""
-        response = self.client.post("/api/tracks/0/clips/0/transpose", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "semitones": 12
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/transpose",
+            json={"track_index": 0, "clip_index": 0, "semitones": 12},
+        )
         assert response.status_code == 200
 
     def test_transpose_notes_negative(self):
         """Test transposing notes down."""
-        response = self.client.post("/api/tracks/0/clips/0/transpose", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "semitones": -12
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/transpose",
+            json={"track_index": 0, "clip_index": 0, "semitones": -12},
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Warp Marker Endpoints
 # =============================================================================
+
 
 class TestWarpMarkerEndpoints:
     """Test warp marker endpoints."""
@@ -631,27 +652,22 @@ class TestWarpMarkerEndpoints:
 
     def test_add_warp_marker(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/warp-markers."""
-        response = self.client.post("/api/tracks/0/clips/0/warp-markers", json={
-            "beat_time": 1.0
-        })
+        response = self.client.post("/api/tracks/0/clips/0/warp-markers", json={"beat_time": 1.0})
         assert response.status_code == 200
 
     def test_add_warp_marker_with_sample_time(self):
         """Test adding warp marker with sample time."""
-        response = self.client.post("/api/tracks/0/clips/0/warp-markers", json={
-            "beat_time": 1.0,
-            "sample_time": 44100.0
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/warp-markers", json={"beat_time": 1.0, "sample_time": 44100.0}
+        )
         assert response.status_code == 200
 
     def test_delete_warp_marker(self):
         """Test DELETE /api/tracks/{track_index}/clips/{clip_index}/warp-markers."""
         # FastAPI TestClient doesn't support json in delete, need to use request body workaround
-        from starlette.testclient import TestClient as StarletteClient
+
         response = self.client.request(
-            "DELETE",
-            "/api/tracks/0/clips/0/warp-markers",
-            json={"beat_time": 1.0}
+            "DELETE", "/api/tracks/0/clips/0/warp-markers", json={"beat_time": 1.0}
         )
         assert response.status_code == 200
 
@@ -659,6 +675,7 @@ class TestWarpMarkerEndpoints:
 # =============================================================================
 # Audio Clip Property Endpoints
 # =============================================================================
+
 
 class TestAudioClipEndpoints:
     """Test audio clip property endpoints."""
@@ -676,9 +693,7 @@ class TestAudioClipEndpoints:
 
     def test_set_clip_gain(self):
         """Test PUT /api/tracks/{track_index}/clips/{clip_index}/gain."""
-        response = self.client.put("/api/tracks/0/clips/0/gain", json={
-            "gain": 3.0
-        })
+        response = self.client.put("/api/tracks/0/clips/0/gain", json={"gain": 3.0})
         assert response.status_code == 200
 
     def test_get_clip_pitch(self):
@@ -689,43 +704,34 @@ class TestAudioClipEndpoints:
 
     def test_set_clip_pitch(self):
         """Test PUT /api/tracks/{track_index}/clips/{clip_index}/pitch."""
-        response = self.client.put("/api/tracks/0/clips/0/pitch", json={
-            "pitch": 12
-        })
+        response = self.client.put("/api/tracks/0/clips/0/pitch", json={"pitch": 12})
         assert response.status_code == 200
 
     def test_set_clip_pitch_min(self):
         """Test minimum pitch (-48)."""
-        response = self.client.put("/api/tracks/0/clips/0/pitch", json={
-            "pitch": -48
-        })
+        response = self.client.put("/api/tracks/0/clips/0/pitch", json={"pitch": -48})
         assert response.status_code == 200
 
     def test_set_clip_pitch_max(self):
         """Test maximum pitch (48)."""
-        response = self.client.put("/api/tracks/0/clips/0/pitch", json={
-            "pitch": 48
-        })
+        response = self.client.put("/api/tracks/0/clips/0/pitch", json={"pitch": 48})
         assert response.status_code == 200
 
     def test_set_clip_pitch_invalid_too_low(self):
         """Test pitch below -48 returns 422."""
-        response = self.client.put("/api/tracks/0/clips/0/pitch", json={
-            "pitch": -49
-        })
+        response = self.client.put("/api/tracks/0/clips/0/pitch", json={"pitch": -49})
         assert response.status_code == 422
 
     def test_set_clip_pitch_invalid_too_high(self):
         """Test pitch above 48 returns 422."""
-        response = self.client.put("/api/tracks/0/clips/0/pitch", json={
-            "pitch": 49
-        })
+        response = self.client.put("/api/tracks/0/clips/0/pitch", json={"pitch": 49})
         assert response.status_code == 422
 
 
 # =============================================================================
 # Scene Endpoints
 # =============================================================================
+
 
 class TestSceneEndpoints:
     """Test all scene-related endpoints."""
@@ -737,9 +743,7 @@ class TestSceneEndpoints:
 
     def test_get_all_scenes(self):
         """Test GET /api/scenes."""
-        self.mock_ableton.send_command.return_value = {
-            "scenes": [{"index": 0, "name": "Scene 1"}]
-        }
+        self.mock_ableton.send_command.return_value = {"scenes": [{"index": 0, "name": "Scene 1"}]}
         response = self.client.get("/api/scenes")
         assert response.status_code == 200
 
@@ -784,10 +788,7 @@ class TestSceneEndpoints:
 
     def test_set_scene_name(self):
         """Test PUT /api/scenes/{scene_index}/name."""
-        response = self.client.put("/api/scenes/0/name", json={
-            "scene_index": 0,
-            "name": "Chorus"
-        })
+        response = self.client.put("/api/scenes/0/name", json={"scene_index": 0, "name": "Chorus"})
         assert response.status_code == 200
 
     def test_get_scene_color(self):
@@ -811,6 +812,7 @@ class TestSceneEndpoints:
 # =============================================================================
 # Device Endpoints
 # =============================================================================
+
 
 class TestDeviceEndpoints:
     """Test all device-related endpoints."""
@@ -843,44 +845,41 @@ class TestDeviceEndpoints:
 
     def test_set_device_parameter(self):
         """Test PUT /api/tracks/{track_index}/devices/{device_index}/parameter."""
-        response = self.client.put("/api/tracks/0/devices/0/parameter", json={
-            "track_index": 0,
-            "device_index": 0,
-            "parameter_index": 0,
-            "value": 0.5
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/parameter",
+            json={"track_index": 0, "device_index": 0, "parameter_index": 0, "value": 0.5},
+        )
         assert response.status_code == 200
 
     def test_toggle_device_on(self):
         """Test enabling a device."""
-        response = self.client.put("/api/tracks/0/devices/0/toggle", json={
-            "track_index": 0,
-            "device_index": 0,
-            "enabled": True
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/toggle",
+            json={"track_index": 0, "device_index": 0, "enabled": True},
+        )
         assert response.status_code == 200
 
     def test_toggle_device_off(self):
         """Test disabling a device."""
-        response = self.client.put("/api/tracks/0/devices/0/toggle", json={
-            "track_index": 0,
-            "device_index": 0,
-            "enabled": False
-        })
+        response = self.client.put(
+            "/api/tracks/0/devices/0/toggle",
+            json={"track_index": 0, "device_index": 0, "enabled": False},
+        )
         assert response.status_code == 200
 
     def test_delete_device(self):
         """Test DELETE /api/tracks/{track_index}/devices/{device_index}."""
         response = self.client.delete("/api/tracks/0/devices/0")
         assert response.status_code == 200
-        self.mock_ableton.send_command.assert_called_with("delete_device", {
-            "track_index": 0, "device_index": 0
-        })
+        self.mock_ableton.send_command.assert_called_with(
+            "delete_device", {"track_index": 0, "device_index": 0}
+        )
 
 
 # =============================================================================
 # Return Track & Send Endpoints
 # =============================================================================
+
 
 class TestReturnTrackEndpoints:
     """Test return track and send endpoints."""
@@ -911,25 +910,21 @@ class TestReturnTrackEndpoints:
 
     def test_set_send_level(self):
         """Test POST /api/tracks/{track_index}/sends/{send_index}."""
-        response = self.client.post("/api/tracks/0/sends/0", json={
-            "track_index": 0,
-            "send_index": 0,
-            "level": 0.5
-        })
+        response = self.client.post(
+            "/api/tracks/0/sends/0", json={"track_index": 0, "send_index": 0, "level": 0.5}
+        )
         assert response.status_code == 200
 
     def test_set_return_volume(self):
         """Test PUT /api/returns/{return_index}/volume."""
-        response = self.client.put("/api/returns/0/volume", json={
-            "return_index": 0,
-            "volume": 0.8
-        })
+        response = self.client.put("/api/returns/0/volume", json={"return_index": 0, "volume": 0.8})
         assert response.status_code == 200
 
 
 # =============================================================================
 # Recording Endpoints
 # =============================================================================
+
 
 class TestRecordingEndpoints:
     """Test recording-related endpoints."""
@@ -982,6 +977,7 @@ class TestRecordingEndpoints:
 # Master Track Endpoints
 # =============================================================================
 
+
 class TestMasterTrackEndpoints:
     """Test master track endpoints."""
 
@@ -992,9 +988,7 @@ class TestMasterTrackEndpoints:
 
     def test_get_master_info(self):
         """Test GET /api/master."""
-        self.mock_ableton.send_command.return_value = {
-            "name": "Master", "volume": 1.0, "pan": 0.0
-        }
+        self.mock_ableton.send_command.return_value = {"name": "Master", "volume": 1.0, "pan": 0.0}
         response = self.client.get("/api/master")
         assert response.status_code == 200
 
@@ -1048,6 +1042,7 @@ class TestMasterTrackEndpoints:
 # Browser Endpoints
 # =============================================================================
 
+
 class TestBrowserEndpoints:
     """Test browser-related endpoints."""
 
@@ -1059,55 +1054,50 @@ class TestBrowserEndpoints:
     def test_browse_path(self):
         """Test POST /api/browser/browse."""
         self.mock_ableton.send_command.return_value = {"items": []}
-        response = self.client.post("/api/browser/browse", json={
-            "path": ["Audio Effects", "EQ Eight"]
-        })
+        response = self.client.post(
+            "/api/browser/browse", json={"path": ["Audio Effects", "EQ Eight"]}
+        )
         assert response.status_code == 200
 
     def test_search_browser(self):
         """Test POST /api/browser/search."""
         self.mock_ableton.send_command.return_value = {"results": []}
-        response = self.client.post("/api/browser/search", json={
-            "query": "reverb",
-            "category": "audio_effects"
-        })
+        response = self.client.post(
+            "/api/browser/search", json={"query": "reverb", "category": "audio_effects"}
+        )
         assert response.status_code == 200
 
     def test_search_browser_all_categories(self):
         """Test browser search with all categories."""
-        response = self.client.post("/api/browser/search", json={
-            "query": "synth",
-            "category": "all"
-        })
+        response = self.client.post(
+            "/api/browser/search", json={"query": "synth", "category": "all"}
+        )
         assert response.status_code == 200
 
     def test_get_browser_children(self):
         """Test POST /api/browser/children."""
-        response = self.client.post("/api/browser/children", json={
-            "uri": "browser://some-uri"
-        })
+        response = self.client.post("/api/browser/children", json={"uri": "browser://some-uri"})
         assert response.status_code == 200
 
     def test_load_item_to_track(self):
         """Test POST /api/browser/load."""
-        response = self.client.post("/api/browser/load", json={
-            "track_index": 0,
-            "uri": "browser://instrument-uri"
-        })
+        response = self.client.post(
+            "/api/browser/load", json={"track_index": 0, "uri": "browser://instrument-uri"}
+        )
         assert response.status_code == 200
 
     def test_load_item_to_return(self):
         """Test POST /api/browser/load-to-return."""
-        response = self.client.post("/api/browser/load-to-return", json={
-            "return_index": 0,
-            "uri": "browser://effect-uri"
-        })
+        response = self.client.post(
+            "/api/browser/load-to-return", json={"return_index": 0, "uri": "browser://effect-uri"}
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # View & Selection Endpoints
 # =============================================================================
+
 
 class TestViewEndpoints:
     """Test view and selection endpoints."""
@@ -1122,7 +1112,7 @@ class TestViewEndpoints:
         self.mock_ableton.send_command.return_value = {
             "view": "Session",
             "selected_track": 0,
-            "selected_scene": 0
+            "selected_scene": 0,
         }
         response = self.client.get("/api/view")
         assert response.status_code == 200
@@ -1137,6 +1127,7 @@ class TestViewEndpoints:
 # Arrangement Endpoints
 # =============================================================================
 
+
 class TestArrangementEndpoints:
     """Test arrangement-related endpoints."""
 
@@ -1150,18 +1141,17 @@ class TestArrangementEndpoints:
         self.mock_ableton.send_command.return_value = {
             "length": 64.0,
             "loop_start": 0.0,
-            "loop_end": 16.0
+            "loop_end": 16.0,
         }
         response = self.client.get("/api/arrangement/length")
         assert response.status_code == 200
 
     def test_set_arrangement_loop(self):
         """Test POST /api/arrangement/loop."""
-        response = self.client.post("/api/arrangement/loop", params={
-            "loop_start": 0.0,
-            "loop_length": 16.0,
-            "loop_on": True
-        })
+        response = self.client.post(
+            "/api/arrangement/loop",
+            params={"loop_start": 0.0, "loop_length": 16.0, "loop_on": True},
+        )
         assert response.status_code == 200
 
     def test_jump_to_time(self):
@@ -1177,10 +1167,9 @@ class TestArrangementEndpoints:
 
     def test_create_locator(self):
         """Test POST /api/arrangement/locators."""
-        response = self.client.post("/api/arrangement/locators", params={
-            "time": 16.0,
-            "name": "Chorus"
-        })
+        response = self.client.post(
+            "/api/arrangement/locators", params={"time": 16.0, "name": "Chorus"}
+        )
         assert response.status_code == 200
 
     def test_delete_locator(self):
@@ -1192,6 +1181,7 @@ class TestArrangementEndpoints:
 # =============================================================================
 # Routing Endpoints
 # =============================================================================
+
 
 class TestRoutingEndpoints:
     """Test I/O routing endpoints."""
@@ -1205,7 +1195,7 @@ class TestRoutingEndpoints:
         """Test GET /api/tracks/{track_index}/routing/input."""
         self.mock_ableton.send_command.return_value = {
             "routing_type": "Ext. In",
-            "routing_channel": "1/2"
+            "routing_channel": "1/2",
         }
         response = self.client.get("/api/tracks/0/routing/input")
         assert response.status_code == 200
@@ -1214,24 +1204,24 @@ class TestRoutingEndpoints:
         """Test GET /api/tracks/{track_index}/routing/output."""
         self.mock_ableton.send_command.return_value = {
             "routing_type": "Master",
-            "routing_channel": ""
+            "routing_channel": "",
         }
         response = self.client.get("/api/tracks/0/routing/output")
         assert response.status_code == 200
 
     def test_set_track_input_routing(self):
         """Test PUT /api/tracks/{track_index}/routing/input."""
-        response = self.client.put("/api/tracks/0/routing/input", params={
-            "routing_type": "Ext. In",
-            "routing_channel": "1/2"
-        })
+        response = self.client.put(
+            "/api/tracks/0/routing/input",
+            params={"routing_type": "Ext. In", "routing_channel": "1/2"},
+        )
         assert response.status_code == 200
 
     def test_set_track_output_routing(self):
         """Test PUT /api/tracks/{track_index}/routing/output."""
-        response = self.client.put("/api/tracks/0/routing/output", params={
-            "routing_type": "Master"
-        })
+        response = self.client.put(
+            "/api/tracks/0/routing/output", params={"routing_type": "Master"}
+        )
         assert response.status_code == 200
 
     def test_get_available_inputs(self):
@@ -1251,6 +1241,7 @@ class TestRoutingEndpoints:
 # Session Info Endpoints
 # =============================================================================
 
+
 class TestSessionInfoEndpoints:
     """Test session info endpoints."""
 
@@ -1261,9 +1252,7 @@ class TestSessionInfoEndpoints:
 
     def test_get_session_path(self):
         """Test GET /api/session/path."""
-        self.mock_ableton.send_command.return_value = {
-            "path": "/Users/test/Music/project.als"
-        }
+        self.mock_ableton.send_command.return_value = {"path": "/Users/test/Music/project.als"}
         response = self.client.get("/api/session/path")
         assert response.status_code == 200
 
@@ -1284,6 +1273,7 @@ class TestSessionInfoEndpoints:
 # AI Music Helper Endpoints
 # =============================================================================
 
+
 class TestAIMusicHelperEndpoints:
     """Test AI music helper endpoints."""
 
@@ -1295,102 +1285,84 @@ class TestAIMusicHelperEndpoints:
     def test_get_scale_notes(self):
         """Test GET /api/music/scale."""
         self.mock_ableton.send_command.return_value = {"notes": [60, 62, 64, 65, 67, 69, 71]}
-        response = self.client.get("/api/music/scale", params={
-            "root": "C",
-            "scale_type": "major",
-            "octave": 4
-        })
+        response = self.client.get(
+            "/api/music/scale", params={"root": "C", "scale_type": "major", "octave": 4}
+        )
         assert response.status_code == 200
 
     def test_get_scale_notes_minor(self):
         """Test getting minor scale notes."""
-        response = self.client.get("/api/music/scale", params={
-            "root": "A",
-            "scale_type": "minor"
-        })
+        response = self.client.get("/api/music/scale", params={"root": "A", "scale_type": "minor"})
         assert response.status_code == 200
 
     def test_get_scale_notes_with_sharps(self):
         """Test getting scale with sharp root."""
-        response = self.client.get("/api/music/scale", params={
-            "root": "F#",
-            "scale_type": "minor"
-        })
+        response = self.client.get("/api/music/scale", params={"root": "F#", "scale_type": "minor"})
         assert response.status_code == 200
 
     def test_get_scale_notes_with_flats(self):
         """Test getting scale with flat root."""
-        response = self.client.get("/api/music/scale", params={
-            "root": "Bb",
-            "scale_type": "major"
-        })
+        response = self.client.get("/api/music/scale", params={"root": "Bb", "scale_type": "major"})
         assert response.status_code == 200
 
     def test_quantize_clip(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/quantize."""
-        response = self.client.post("/api/tracks/0/clips/0/quantize", json={
-            "grid": 0.25,
-            "strength": 1.0
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0/quantize", json={"grid": 0.25, "strength": 1.0}
+        )
         assert response.status_code == 200
 
     def test_quantize_clip_default_strength(self):
         """Test quantize with default strength."""
-        response = self.client.post("/api/tracks/0/clips/0/quantize", json={
-            "grid": 0.5
-        })
+        response = self.client.post("/api/tracks/0/clips/0/quantize", json={"grid": 0.5})
         assert response.status_code == 200
 
     def test_humanize_timing(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/humanize/timing."""
-        response = self.client.post("/api/tracks/0/clips/0/humanize/timing", json={
-            "amount": 0.1
-        })
+        response = self.client.post("/api/tracks/0/clips/0/humanize/timing", json={"amount": 0.1})
         assert response.status_code == 200
 
     def test_humanize_velocity(self):
         """Test POST /api/tracks/{track_index}/clips/{clip_index}/humanize/velocity."""
-        response = self.client.post("/api/tracks/0/clips/0/humanize/velocity", json={
-            "amount": 0.2
-        })
+        response = self.client.post("/api/tracks/0/clips/0/humanize/velocity", json={"amount": 0.2})
         assert response.status_code == 200
 
     def test_generate_drum_pattern(self):
         """Test POST /api/music/drums."""
-        response = self.client.post("/api/music/drums", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "style": "house",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/drums",
+            json={"track_index": 0, "clip_index": 0, "style": "house", "length": 4.0},
+        )
         assert response.status_code == 200
 
     def test_generate_drum_pattern_styles(self):
         """Test various drum pattern styles."""
         for style in ["basic", "house", "techno", "breakbeat"]:
-            response = self.client.post("/api/music/drums", json={
-                "track_index": 0,
-                "clip_index": 0,
-                "style": style,
-                "length": 4.0
-            })
+            response = self.client.post(
+                "/api/music/drums",
+                json={"track_index": 0, "clip_index": 0, "style": style, "length": 4.0},
+            )
             assert response.status_code == 200
 
     def test_generate_bassline(self):
         """Test POST /api/music/bassline."""
-        response = self.client.post("/api/music/bassline", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "root": 36,
-            "scale_type": "minor",
-            "length": 4.0
-        })
+        response = self.client.post(
+            "/api/music/bassline",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "root": 36,
+                "scale_type": "minor",
+                "length": 4.0,
+            },
+        )
         assert response.status_code == 200
 
 
 # =============================================================================
 # Generic Command Endpoint
 # =============================================================================
+
 
 class TestGenericCommandEndpoint:
     """Test the generic command endpoint."""
@@ -1402,29 +1374,24 @@ class TestGenericCommandEndpoint:
 
     def test_execute_command(self):
         """Test POST /api/command with valid command."""
-        response = self.client.post("/api/command", json={
-            "command": "get_session_info"
-        })
+        response = self.client.post("/api/command", json={"command": "get_session_info"})
         assert response.status_code == 200
 
     def test_execute_command_with_params(self):
         """Test command with parameters."""
-        response = self.client.post("/api/command", json={
-            "command": "set_tempo",
-            "params": {"tempo": 140.0}
-        })
+        response = self.client.post(
+            "/api/command", json={"command": "set_tempo", "params": {"tempo": 140.0}}
+        )
         assert response.status_code == 200
 
     def test_execute_unknown_command(self):
         """Test unknown command returns error."""
         from fastapi import HTTPException
+
         self.mock_ableton.send_command.side_effect = HTTPException(
-            status_code=400,
-            detail="Unknown command: invalid_command"
+            status_code=400, detail="Unknown command: invalid_command"
         )
-        response = self.client.post("/api/command", json={
-            "command": "invalid_command"
-        })
+        response = self.client.post("/api/command", json={"command": "invalid_command"})
         # Can be 400 or 422 depending on how validation is handled
         assert response.status_code in [400, 422]
 
@@ -1432,6 +1399,7 @@ class TestGenericCommandEndpoint:
 # =============================================================================
 # Utility Endpoints
 # =============================================================================
+
 
 class TestUtilityEndpoints:
     """Test utility endpoints."""
@@ -1471,6 +1439,7 @@ class TestUtilityEndpoints:
 # Generic Command Parameter Validation Tests
 # =============================================================================
 
+
 class TestCommandParameterValidation:
     """Test validate_command_params function via /api/command endpoint."""
 
@@ -1481,10 +1450,13 @@ class TestCommandParameterValidation:
 
     def test_command_missing_required_param(self):
         """Test command with missing required parameter returns 422."""
-        response = self.client.post("/api/command", json={
-            "command": "create_clip",
-            "params": {"track_index": 0}  # Missing clip_index
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "create_clip",
+                "params": {"track_index": 0},  # Missing clip_index
+            },
+        )
         assert response.status_code == 422
         # Check error message in either 'detail' or 'error' field
         error_msg = response.json().get("detail", "") or response.json().get("error", "")
@@ -1492,161 +1464,194 @@ class TestCommandParameterValidation:
 
     def test_command_int_param_not_integer(self):
         """Test integer parameter with non-integer value."""
-        response = self.client.post("/api/command", json={
-            "command": "create_clip",
-            "params": {"track_index": "not_an_int", "clip_index": 0}
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "create_clip",
+                "params": {"track_index": "not_an_int", "clip_index": 0},
+            },
+        )
         assert response.status_code == 422
 
     def test_command_int_param_below_min(self):
         """Test integer parameter below minimum."""
-        response = self.client.post("/api/command", json={
-            "command": "get_track_info",
-            "params": {"track_index": -1}
-        })
+        response = self.client.post(
+            "/api/command", json={"command": "get_track_info", "params": {"track_index": -1}}
+        )
         assert response.status_code == 422
 
     def test_command_int_param_above_max(self):
         """Test integer parameter above maximum."""
-        response = self.client.post("/api/command", json={
-            "command": "get_track_info",
-            "params": {"track_index": 1000}
-        })
+        response = self.client.post(
+            "/api/command", json={"command": "get_track_info", "params": {"track_index": 1000}}
+        )
         assert response.status_code == 422
 
     def test_command_float_param_not_number(self):
         """Test float parameter with non-numeric value."""
-        response = self.client.post("/api/command", json={
-            "command": "set_tempo",
-            "params": {"tempo": "not_a_number"}
-        })
+        response = self.client.post(
+            "/api/command", json={"command": "set_tempo", "params": {"tempo": "not_a_number"}}
+        )
         assert response.status_code == 422
 
     def test_command_float_param_below_min(self):
         """Test float parameter below minimum."""
-        response = self.client.post("/api/command", json={
-            "command": "set_tempo",
-            "params": {"tempo": 10.0}  # Min is 20
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "set_tempo",
+                "params": {"tempo": 10.0},  # Min is 20
+            },
+        )
         assert response.status_code == 422
 
     def test_command_float_param_above_max(self):
         """Test float parameter above maximum."""
-        response = self.client.post("/api/command", json={
-            "command": "set_tempo",
-            "params": {"tempo": 400.0}  # Max is 300
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "set_tempo",
+                "params": {"tempo": 400.0},  # Max is 300
+            },
+        )
         assert response.status_code == 422
 
     def test_command_bool_param_not_bool(self):
         """Test boolean parameter with non-boolean value."""
-        response = self.client.post("/api/command", json={
-            "command": "set_track_mute",
-            "params": {"track_index": 0, "mute": "yes"}  # Should be bool
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "set_track_mute",
+                "params": {"track_index": 0, "mute": "yes"},  # Should be bool
+            },
+        )
         assert response.status_code == 422
 
     def test_command_string_param_not_string(self):
         """Test string parameter with non-string value."""
-        response = self.client.post("/api/command", json={
-            "command": "set_track_name",
-            "params": {"track_index": 0, "name": 12345}  # Should be string
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "set_track_name",
+                "params": {"track_index": 0, "name": 12345},  # Should be string
+            },
+        )
         assert response.status_code == 422
 
     def test_command_string_param_too_long(self):
         """Test string parameter exceeding max length."""
-        response = self.client.post("/api/command", json={
-            "command": "set_track_name",
-            "params": {"track_index": 0, "name": "x" * 300}  # Max is 256
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "set_track_name",
+                "params": {"track_index": 0, "name": "x" * 300},  # Max is 256
+            },
+        )
         assert response.status_code == 422
 
     def test_command_list_param_not_list(self):
         """Test list parameter with non-list value."""
-        response = self.client.post("/api/command", json={
-            "command": "add_notes_to_clip",
-            "params": {
-                "track_index": 0,
-                "clip_index": 0,
-                "notes": "not_a_list"  # Should be list
-            }
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "add_notes_to_clip",
+                "params": {
+                    "track_index": 0,
+                    "clip_index": 0,
+                    "notes": "not_a_list",  # Should be list
+                },
+            },
+        )
         assert response.status_code == 422
 
     def test_command_list_param_valid(self):
         """Test list parameter with valid values."""
         notes = [{"pitch": 60, "start_time": i * 0.25, "duration": 0.25} for i in range(10)]
-        response = self.client.post("/api/command", json={
-            "command": "add_notes_to_clip",
-            "params": {
-                "track_index": 0,
-                "clip_index": 0,
-                "notes": notes
-            }
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "add_notes_to_clip",
+                "params": {"track_index": 0, "clip_index": 0, "notes": notes},
+            },
+        )
         assert response.status_code == 200
 
     def test_command_string_valid_value(self):
         """Test string parameter with valid value."""
-        response = self.client.post("/api/command", json={
-            "command": "generate_drum_pattern",
-            "params": {
-                "track_index": 0,
-                "clip_index": 0,
-                "style": "techno"  # Valid value
-            }
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "generate_drum_pattern",
+                "params": {
+                    "track_index": 0,
+                    "clip_index": 0,
+                    "style": "techno",  # Valid value
+                },
+            },
+        )
         assert response.status_code == 200
 
     def test_command_valid_string_allowed_value(self):
         """Test string parameter with valid allowed value."""
-        response = self.client.post("/api/command", json={
-            "command": "generate_drum_pattern",
-            "params": {
-                "track_index": 0,
-                "clip_index": 0,
-                "style": "house"  # Valid value
-            }
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "generate_drum_pattern",
+                "params": {
+                    "track_index": 0,
+                    "clip_index": 0,
+                    "style": "house",  # Valid value
+                },
+            },
+        )
         assert response.status_code == 200
 
     def test_command_optional_param_not_provided(self):
         """Test command with optional param not provided succeeds."""
-        response = self.client.post("/api/command", json={
-            "command": "create_midi_track",
-            "params": {}  # All params optional
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "create_midi_track",
+                "params": {},  # All params optional
+            },
+        )
         assert response.status_code == 200
 
     def test_command_extra_params_allowed(self):
         """Test command with extra params not in schema still passes."""
-        response = self.client.post("/api/command", json={
-            "command": "get_session_info",
-            "params": {"extra_param": "value"}  # Not in schema
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "get_session_info",
+                "params": {"extra_param": "value"},  # Not in schema
+            },
+        )
         assert response.status_code == 200
 
     def test_command_bool_param_false(self):
         """Test boolean parameter with False value (not truthy check)."""
-        response = self.client.post("/api/command", json={
-            "command": "set_track_mute",
-            "params": {"track_index": 0, "mute": False}
-        })
+        response = self.client.post(
+            "/api/command",
+            json={"command": "set_track_mute", "params": {"track_index": 0, "mute": False}},
+        )
         assert response.status_code == 200
 
     def test_command_int_coercion_blocked(self):
         """Test that boolean is not accepted as int."""
-        response = self.client.post("/api/command", json={
-            "command": "get_track_info",
-            "params": {"track_index": True}  # Boolean, not int
-        })
+        response = self.client.post(
+            "/api/command",
+            json={
+                "command": "get_track_info",
+                "params": {"track_index": True},  # Boolean, not int
+            },
+        )
         assert response.status_code == 422
 
 
 # =============================================================================
 # Additional Endpoint Coverage Tests
 # =============================================================================
+
 
 class TestAdditionalEndpointCoverage:
     """Additional tests for better endpoint coverage."""
@@ -1658,20 +1663,15 @@ class TestAdditionalEndpointCoverage:
 
     def test_create_midi_track_at_negative_index(self):
         """Test creating MIDI track at negative index (should use -1 for end)."""
-        response = self.client.post("/api/tracks/midi", json={
-            "index": -1,
-            "name": "Test Track"
-        })
+        response = self.client.post("/api/tracks/midi", json={"index": -1, "name": "Test Track"})
         assert response.status_code == 200
 
     def test_create_clip_with_both_indices(self):
         """Test creating clip with both indices in path and body."""
-        response = self.client.post("/api/tracks/0/clips/0", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "length": 4.0,
-            "name": "Test Clip"
-        })
+        response = self.client.post(
+            "/api/tracks/0/clips/0",
+            json={"track_index": 0, "clip_index": 0, "length": 4.0, "name": "Test Clip"},
+        )
         assert response.status_code == 200
 
     def test_get_clip_notes_various_tracks(self):
@@ -1688,54 +1688,45 @@ class TestAdditionalEndpointCoverage:
 
     def test_set_clip_loop_all_params(self):
         """Test setting clip loop with all parameters."""
-        response = self.client.put("/api/tracks/0/clips/0/loop", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "loop_start": 0.0,
-            "loop_end": 4.0,
-            "looping": True
-        })
+        response = self.client.put(
+            "/api/tracks/0/clips/0/loop",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "loop_start": 0.0,
+                "loop_end": 4.0,
+                "looping": True,
+            },
+        )
         assert response.status_code == 200
 
     def test_set_scene_color_valid(self):
         """Test setting scene color with valid color index."""
-        response = self.client.put("/api/scenes/0/color", json={
-            "scene_index": 0,
-            "color": 5
-        })
+        response = self.client.put("/api/scenes/0/color", json={"scene_index": 0, "color": 5})
         assert response.status_code == 200
 
     def test_add_warp_marker_minimal(self):
         """Test adding warp marker with minimal params."""
-        response = self.client.post("/api/tracks/0/clips/0/warp-markers", json={
-            "beat_time": 1.0
-        })
+        response = self.client.post("/api/tracks/0/clips/0/warp-markers", json={"beat_time": 1.0})
         assert response.status_code == 200
 
     def test_delete_warp_marker_at_time(self):
         """Test deleting warp marker at specific time."""
         response = self.client.request(
-            "DELETE",
-            "/api/tracks/0/clips/0/warp-markers",
-            json={"beat_time": 1.0}
+            "DELETE", "/api/tracks/0/clips/0/warp-markers", json={"beat_time": 1.0}
         )
         assert response.status_code == 200
 
     def test_set_clip_gain_boundary_values(self):
         """Test setting clip gain at boundary values."""
         for gain in [0.0, 0.5, 1.0]:
-            response = self.client.put("/api/tracks/0/clips/0/gain", json={
-                "gain": gain
-            })
+            response = self.client.put("/api/tracks/0/clips/0/gain", json={"gain": gain})
             assert response.status_code == 200
 
     def test_get_all_scenes_returns_list(self):
         """Test get all scenes returns proper structure."""
         self.mock_ableton.send_command.return_value = {
-            "scenes": [
-                {"index": 0, "name": "Scene 1"},
-                {"index": 1, "name": "Scene 2"}
-            ]
+            "scenes": [{"index": 0, "name": "Scene 1"}, {"index": 1, "name": "Scene 2"}]
         }
         response = self.client.get("/api/scenes")
         assert response.status_code == 200
@@ -1745,66 +1736,60 @@ class TestAdditionalEndpointCoverage:
     def test_browse_path_with_path(self):
         """Test browsing path with specific path list."""
         self.mock_ableton.send_command.return_value = {"items": []}
-        response = self.client.post("/api/browser/browse", json={
-            "path": ["Drums", "Acoustic"]
-        })
+        response = self.client.post("/api/browser/browse", json={"path": ["Drums", "Acoustic"]})
         assert response.status_code == 200
 
     def test_load_item_to_track_with_uri(self):
         """Test loading browser item to track."""
-        response = self.client.post("/api/browser/load", json={
-            "uri": "userfolder:///path/to/preset.adg",
-            "track_index": 0
-        })
+        response = self.client.post(
+            "/api/browser/load", json={"uri": "userfolder:///path/to/preset.adg", "track_index": 0}
+        )
         assert response.status_code == 200
 
     def test_focus_view_session(self):
         """Test focusing session view."""
-        response = self.client.post("/api/view/focus", params={
-            "view_name": "Session"
-        })
+        response = self.client.post("/api/view/focus", params={"view_name": "Session"})
         assert response.status_code == 200
 
     def test_focus_view_arranger(self):
         """Test focusing arranger view."""
-        response = self.client.post("/api/view/focus", params={
-            "view_name": "Arranger"
-        })
+        response = self.client.post("/api/view/focus", params={"view_name": "Arranger"})
         assert response.status_code == 200
 
     def test_set_arrangement_loop_with_all_params(self):
         """Test setting arrangement loop with all parameters."""
-        response = self.client.post("/api/arrangement/loop", params={
-            "loop_start": 0.0,
-            "loop_length": 16.0,
-            "loop_on": True
-        })
+        response = self.client.post(
+            "/api/arrangement/loop",
+            params={"loop_start": 0.0, "loop_length": 16.0, "loop_on": True},
+        )
         assert response.status_code == 200
 
     def test_create_locator_with_name(self):
         """Test creating locator with name."""
-        response = self.client.post("/api/arrangement/locators", params={
-            "time": 8.0,
-            "name": "Chorus"
-        })
+        response = self.client.post(
+            "/api/arrangement/locators", params={"time": 8.0, "name": "Chorus"}
+        )
         assert response.status_code == 200
 
     def test_humanize_timing_various_amounts(self):
         """Test humanize with various timing amounts."""
         for amount in [0.01, 0.1, 0.5]:
-            response = self.client.post("/api/tracks/0/clips/0/humanize/timing", json={
-                "amount": amount
-            })
+            response = self.client.post(
+                "/api/tracks/0/clips/0/humanize/timing", json={"amount": amount}
+            )
             assert response.status_code == 200
 
     def test_generate_bassline_all_params(self):
         """Test bassline generation with all parameters."""
-        response = self.client.post("/api/music/bassline", json={
-            "track_index": 0,
-            "clip_index": 0,
-            "root": 36,
-            "scale_type": "minor",
-            "length": 8.0,
-            "density": 0.5
-        })
+        response = self.client.post(
+            "/api/music/bassline",
+            json={
+                "track_index": 0,
+                "clip_index": 0,
+                "root": 36,
+                "scale_type": "minor",
+                "length": 8.0,
+                "density": 0.5,
+            },
+        )
         assert response.status_code == 200

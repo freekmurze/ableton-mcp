@@ -1,10 +1,16 @@
 # Let AI control Ableton
 
-This lets Claude drive Ableton Live directly. It can create tracks, load instruments and effects from your browser, turn any knob on any device, write MIDI clips with per note probability, draw automation curves, and mix. Around 130 commands covering most of the Live Object Model.
+Say "build me a dark ambient patch with a slow filter sweep" and watch your Live set fill in. New MIDI track, Drift loaded, slow attack, long release, Auto Filter behind it with an unsynced LFO drifting across the cutoff, a chord written at a 7 bar loop so it never quite lines up with anything else. Fired and playing. That takes about twenty seconds.
 
-You talk, it builds. You listen and tell it what's wrong.
+Then you listen, say the bass is too quiet, and it fixes that too.
 
-Here's what that looks like in practice: you ask for an ambient patch, and Claude creates a MIDI track, drops Drift on it, sets a slow attack and a long release, adds an Auto Filter with an unsynced LFO on the cutoff, writes a chord at a 7 bar loop length so it drifts against your other clips, and fires it. That takes it about twenty seconds. Then you listen and say the bass is too quiet, and it fixes that too.
+That's the whole loop. You describe, it builds, you judge. Around 130 commands covering most of the Live Object Model: creating tracks, loading anything from your browser, turning any knob on any device, writing MIDI with per note probability, drawing automation, mixing, transport.
+
+Where this gets genuinely interesting is the stuff you'd never do by hand because life is short. A twelve minute filter sweep with 200 breakpoints. Six parameters each on their own slow curve at different phase offsets. Clips at 3, 5, 7, 11, 13 and 17 bars, which are all coprime, so the full stack doesn't repeat for over a million bars. That's about 77 days of music that never plays the same way twice, and it took one sentence to ask for.
+
+Per note probability is the other one. Every note gets its own chance of firing, so the kick stays certain while the hats flicker and the melody thins out and fills back in. Generative patches that actually evolve rather than loop.
+
+None of that is hard. It's just tedious, and tedium is exactly what a machine should be doing while you get on with deciding whether any of it sounds good.
 
 Let me walk you through it.
 
