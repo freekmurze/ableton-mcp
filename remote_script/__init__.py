@@ -5407,23 +5407,37 @@ class AbletonAI(ControlSurface):
             else:
                 return {"error": "Automation envelopes not supported in this version"}
 
-            # Clear existing and add new points
+            # Clear existing automation in the clip's range.
             if hasattr(envelope, 'clear'):
                 envelope.clear()
+            elif hasattr(envelope, 'clear_range'):
+                envelope.clear_range(0.0, getattr(clip, 'length', 0.0))
 
-            # Add breakpoints from envelope_data
-            # envelope_data format: [{"time": float, "value": float}, ...]
+            # Insert breakpoints. The Live API method is insert_step(time,
+            # duration, value); a zero-duration step is a breakpoint and Live
+            # interpolates linearly between them. The previous code called a
+            # non-existent insert_value() guarded by hasattr, so it silently
+            # inserted nothing and every envelope came out flat.
+            inserted = 0
+            method = None
             for point in envelope_data:
-                time = point.get("time", 0)
-                value = point.get("value", param.value)
-                if hasattr(envelope, 'insert_value'):
+                time = float(point.get("time", 0))
+                value = float(point.get("value", param.value))
+                if hasattr(envelope, 'insert_step'):
+                    envelope.insert_step(time, 0.0, value)
+                    inserted += 1
+                    method = "insert_step"
+                elif hasattr(envelope, 'insert_value'):
                     envelope.insert_value(time, value)
+                    inserted += 1
+                    method = "insert_value"
 
             return {
                 "track_index": track_index,
                 "clip_index": clip_index,
                 "parameter_name": parameter_name,
-                "points_added": len(envelope_data)
+                "points_added": inserted,
+                "method": method
             }
         except Exception as e:
             self.log_message("Error setting clip automation: " + str(e))
